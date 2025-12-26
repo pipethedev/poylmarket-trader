@@ -30,7 +30,8 @@ export class GlobalExceptionFilter implements ExceptionFilter {
     if (exception instanceof AppException) {
       status = exception.getStatus();
       const exceptionResponse = exception.getResponse();
-      const responseBody = typeof exceptionResponse === 'object' ? (exceptionResponse as Record<string, unknown>) : {};
+      const responseBody =
+        typeof exceptionResponse === 'object' ? (exceptionResponse as Record<string, unknown>) : {};
       errorResponse = {
         code: exception.code,
         message: (responseBody.message as string) || 'An error occurred',

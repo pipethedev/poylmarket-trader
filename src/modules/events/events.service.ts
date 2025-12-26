@@ -93,18 +93,16 @@ export class EventsService {
 
     return {
       ...this.mapToResponse(event),
-      markets: await Promise.all(
-        markets.map((market) => {
-          const summary = this.mapMarketToSummary(market);
-          summary.tokens = (tokensMap.get(market.id) || []).map((token) => ({
-            id: token.id,
-            tokenId: token.tokenId,
-            outcome: token.outcome,
-            price: token.price,
-          }));
-          return summary;
-        }),
-      ),
+      markets: markets.map((market) => {
+        const summary = this.mapMarketToSummary(market);
+        summary.tokens = (tokensMap.get(market.id) || []).map((token) => ({
+          id: token.id,
+          tokenId: token.tokenId,
+          outcome: token.outcome,
+          price: token.price,
+        }));
+        return summary;
+      }),
     };
   }
 
@@ -128,7 +126,9 @@ export class EventsService {
     return markets.map((market) => this.mapMarketToSummary(market));
   }
 
-  async syncEvents(limit = 100): Promise<{ jobId: string; message: string; syncedEvents: number; syncedMarkets: number }> {
+  async syncEvents(
+    limit = 100,
+  ): Promise<{ jobId: string; message: string; syncedEvents: number; syncedMarkets: number }> {
     this.logger.log(`Queuing sync job with limit: ${limit}`);
 
     const job = await this.syncQueue.add(

@@ -20,7 +20,12 @@ export class SyncProcessor extends WorkerHost {
     this.logger = logger.setPrefix(LogPrefix.QUEUE).setContext(SyncProcessor.name);
   }
 
-  async process(job: Job<SyncJobData>): Promise<{ eventsCreated: number; eventsUpdated: number; marketsCreated: number; marketsUpdated: number }> {
+  async process(job: Job<SyncJobData>): Promise<{
+    eventsCreated: number;
+    eventsUpdated: number;
+    marketsCreated: number;
+    marketsUpdated: number;
+  }> {
     const { limit } = job.data;
     const jobLogger = this.logger.child({ limit, jobId: job.id });
 
@@ -58,8 +63,6 @@ export class SyncProcessor extends WorkerHost {
 
   @OnWorkerEvent('failed')
   onFailed(job: Job<SyncJobData>, error: Error) {
-    this.logger
-      .child({ jobId: job.id })
-      .error(`Sync job failed: ${error.message}`, error.stack);
+    this.logger.child({ jobId: job.id }).error(`Sync job failed: ${error.message}`, error.stack);
   }
 }

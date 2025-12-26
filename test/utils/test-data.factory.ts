@@ -2,7 +2,13 @@ import { DataSource, Repository } from 'typeorm';
 import { Event } from '@database/entities/event.entity';
 import { Market } from '@database/entities/market.entity';
 import { Token, TokenOutcome } from '@database/entities/token.entity';
-import { Order, OrderType, OrderSide, OrderStatus, OrderOutcome } from '@database/entities/order.entity';
+import {
+  Order,
+  OrderType,
+  OrderSide,
+  OrderStatus,
+  OrderOutcome,
+} from '@database/entities/order.entity';
 
 export class TestDataFactory {
   private eventRepo: Repository<Event>;
@@ -49,7 +55,11 @@ export class TestDataFactory {
     return this.marketRepo.save(market);
   }
 
-  async createToken(marketId: number, outcome: TokenOutcome, overrides?: Partial<Token>): Promise<Token> {
+  async createToken(
+    marketId: number,
+    outcome: TokenOutcome,
+    overrides?: Partial<Token>,
+  ): Promise<Token> {
     const token = this.tokenRepo.create({
       tokenId: `token-${outcome}-${Date.now()}-${Math.random()}`,
       marketId,

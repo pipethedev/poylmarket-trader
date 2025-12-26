@@ -215,9 +215,7 @@ describe('Orders API (e2e)', () => {
 
   describe('GET /orders', () => {
     it('should return empty list when no orders exist', async () => {
-      const response = await request(app.getHttpServer())
-        .get('/orders')
-        .expect(200);
+      const response = await request(app.getHttpServer()).get('/orders').expect(200);
 
       expect(response.body).toEqual({
         data: [],
@@ -296,9 +294,7 @@ describe('Orders API (e2e)', () => {
       const market = await dataFactory.createMarket(event.id);
       const order = await dataFactory.createOrder(market.id, OrderOutcome.YES);
 
-      const response = await request(app.getHttpServer())
-        .get(`/orders/${order.id}`)
-        .expect(200);
+      const response = await request(app.getHttpServer()).get(`/orders/${order.id}`).expect(200);
 
       expect(response.body).toMatchObject({
         id: order.id,
@@ -310,17 +306,13 @@ describe('Orders API (e2e)', () => {
     });
 
     it('should return 404 when order does not exist', async () => {
-      const response = await request(app.getHttpServer())
-        .get('/orders/99999')
-        .expect(404);
+      const response = await request(app.getHttpServer()).get('/orders/99999').expect(404);
 
       expect(response.body.message).toContain('not found');
     });
 
     it('should return 400 for invalid order ID', async () => {
-      await request(app.getHttpServer())
-        .get('/orders/invalid')
-        .expect(400);
+      await request(app.getHttpServer()).get('/orders/invalid').expect(400);
     });
   });
 
@@ -332,9 +324,7 @@ describe('Orders API (e2e)', () => {
         status: OrderStatus.PENDING,
       });
 
-      const response = await request(app.getHttpServer())
-        .delete(`/orders/${order.id}`)
-        .expect(200);
+      const response = await request(app.getHttpServer()).delete(`/orders/${order.id}`).expect(200);
 
       expect(response.body.status).toBe(OrderStatus.CANCELLED);
     });
@@ -346,9 +336,7 @@ describe('Orders API (e2e)', () => {
         status: OrderStatus.QUEUED,
       });
 
-      const response = await request(app.getHttpServer())
-        .delete(`/orders/${order.id}`)
-        .expect(200);
+      const response = await request(app.getHttpServer()).delete(`/orders/${order.id}`).expect(200);
 
       expect(response.body.status).toBe(OrderStatus.CANCELLED);
     });
@@ -360,9 +348,7 @@ describe('Orders API (e2e)', () => {
         status: OrderStatus.PROCESSING,
       });
 
-      await request(app.getHttpServer())
-        .delete(`/orders/${order.id}`)
-        .expect(400);
+      await request(app.getHttpServer()).delete(`/orders/${order.id}`).expect(400);
     });
 
     it('should not cancel a filled order', async () => {
@@ -372,9 +358,7 @@ describe('Orders API (e2e)', () => {
         status: OrderStatus.FILLED,
       });
 
-      await request(app.getHttpServer())
-        .delete(`/orders/${order.id}`)
-        .expect(400);
+      await request(app.getHttpServer()).delete(`/orders/${order.id}`).expect(400);
     });
 
     it('should not cancel an already cancelled order', async () => {
@@ -384,15 +368,11 @@ describe('Orders API (e2e)', () => {
         status: OrderStatus.CANCELLED,
       });
 
-      await request(app.getHttpServer())
-        .delete(`/orders/${order.id}`)
-        .expect(400);
+      await request(app.getHttpServer()).delete(`/orders/${order.id}`).expect(400);
     });
 
     it('should return 404 when order does not exist', async () => {
-      await request(app.getHttpServer())
-        .delete('/orders/99999')
-        .expect(404);
+      await request(app.getHttpServer()).delete('/orders/99999').expect(404);
     });
   });
 
@@ -435,9 +415,7 @@ describe('Orders API (e2e)', () => {
       const market = await dataFactory.createMarket(event.id);
       const order = await dataFactory.createOrder(market.id, OrderOutcome.YES);
 
-      const response = await request(app.getHttpServer())
-        .get(`/orders/${order.id}`)
-        .expect(200);
+      const response = await request(app.getHttpServer()).get(`/orders/${order.id}`).expect(200);
 
       expect(response.body).toHaveProperty('id', order.id);
       expect(response.body).toHaveProperty('status');

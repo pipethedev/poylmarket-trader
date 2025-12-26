@@ -7,7 +7,11 @@ export type DatabaseConfig = {
 };
 
 export type RedisConfig = {
-  url: string;
+  host: string;
+  port: number;
+  username?: string;
+  password?: string;
+  tls: boolean;
 };
 
 export type PolymarketConfig = {

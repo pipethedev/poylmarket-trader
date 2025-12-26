@@ -11,7 +11,11 @@ export default (): AppConfig => ({
     database: process.env.DATABASE_NAME ?? 'polymarket_trader',
   },
   redis: {
-    url: process.env.REDIS_URL ?? 'redis://localhost:6379',
+    host: process.env.REDIS_HOST ?? 'localhost',
+    port: parseInt(process.env.REDIS_PORT ?? '6379', 10),
+    username: process.env.REDIS_USERNAME,
+    password: process.env.REDIS_PASSWORD,
+    tls: process.env.REDIS_TLS === 'true',
   },
   polymarket: {
     clobApiUrl: process.env.POLYMARKET_CLOB_API_URL ?? 'https://clob.polymarket.com',

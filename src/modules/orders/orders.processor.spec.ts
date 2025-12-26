@@ -5,7 +5,13 @@ import { Job } from 'bullmq';
 import { OrdersProcessor } from './orders.processor';
 import { OrderRepository } from '@database/repositories/order.repository';
 import { MarketRepository } from '@database/repositories/market.repository';
-import { Order, OrderStatus, OrderSide, OrderType, OrderOutcome } from '@database/entities/order.entity';
+import {
+  Order,
+  OrderStatus,
+  OrderSide,
+  OrderType,
+  OrderOutcome,
+} from '@database/entities/order.entity';
 import { Market } from '@database/entities/market.entity';
 import { AppLogger } from '@common/logger/app-logger.service';
 import { MARKET_PROVIDER } from '@providers/market-provider.interface';
@@ -295,4 +301,3 @@ describe('OrdersProcessor', () => {
     });
   });
 });
-

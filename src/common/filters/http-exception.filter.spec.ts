@@ -48,9 +48,14 @@ describe('GlobalExceptionFilter', () => {
   });
 
   it('should handle AppException', () => {
-    const exception = new AppException('CUSTOM_ERROR', 'Custom error message', HttpStatus.BAD_REQUEST, {
-      field: 'value',
-    });
+    const exception = new AppException(
+      'CUSTOM_ERROR',
+      'Custom error message',
+      HttpStatus.BAD_REQUEST,
+      {
+        field: 'value',
+      },
+    );
 
     filter.catch(exception, mockArgumentsHost as never);
 

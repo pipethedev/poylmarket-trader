@@ -14,7 +14,6 @@ describe('EventsService', () => {
   let eventRepository: jest.Mocked<EventRepository>;
   let marketRepository: jest.Mocked<MarketRepository>;
   let tokenRepository: jest.Mocked<TokenRepository>;
-  let syncService: jest.Mocked<SyncService>;
   let module: TestingModule;
 
   const mockLogger = {
@@ -115,7 +114,6 @@ describe('EventsService', () => {
     eventRepository = module.get(EventRepository);
     marketRepository = module.get(MarketRepository);
     tokenRepository = module.get(TokenRepository);
-    syncService = module.get(SyncService);
   });
 
   describe('getEvent', () => {

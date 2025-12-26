@@ -1,0 +1,11 @@
+#!/usr/bin/env sh
+. "$(dirname -- "$0")/_/husky.sh"
+
+# Run linting (auto-fixes issues, exits with error if unfixable errors remain)
+pnpm lint || exit 1
+
+# Run formatting (auto-formats files)
+pnpm format
+
+# Add the formatted files back to the commit
+git add -A

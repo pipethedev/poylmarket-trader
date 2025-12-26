@@ -1,5 +1,11 @@
 import { OrderFactory } from './order.factory';
-import { Order, OrderStatus, OrderSide, OrderType, OrderOutcome } from '@database/entities/order.entity';
+import {
+  Order,
+  OrderStatus,
+  OrderSide,
+  OrderType,
+  OrderOutcome,
+} from '@database/entities/order.entity';
 import { CreateOrderDto } from '@modules/orders/dto/create-order.dto';
 
 describe('OrderFactory', () => {
@@ -110,4 +116,3 @@ describe('OrderFactory', () => {
     });
   });
 });
-

@@ -83,9 +83,7 @@ describe('SyncProcessor', () => {
         jobId: 'job-123',
       });
       expect(mockLogger.log).toHaveBeenCalledWith('Processing sync job');
-      expect(mockLogger.log).toHaveBeenCalledWith(
-        expect.stringContaining('Sync completed'),
-      );
+      expect(mockLogger.log).toHaveBeenCalledWith(expect.stringContaining('Sync completed'));
       expect(mockLogger.log).toHaveBeenCalledWith(
         expect.stringContaining('Events: 5 created, 3 updated'),
       );
@@ -113,9 +111,7 @@ describe('SyncProcessor', () => {
 
       await processor.process(job);
 
-      expect(mockLogger.warn).toHaveBeenCalledWith(
-        'Sync completed with 3 errors',
-      );
+      expect(mockLogger.warn).toHaveBeenCalledWith('Sync completed with 3 errors');
     });
 
     it('should handle sync service errors and rethrow', async () => {

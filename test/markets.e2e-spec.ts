@@ -29,9 +29,7 @@ describe('Markets API (e2e)', () => {
 
   describe('GET /markets', () => {
     it('should return empty list when no markets exist', async () => {
-      const response = await request(app.getHttpServer())
-        .get('/markets')
-        .expect(200);
+      const response = await request(app.getHttpServer()).get('/markets').expect(200);
 
       expect(response.body).toEqual({
         data: [],
@@ -140,9 +138,7 @@ describe('Markets API (e2e)', () => {
       await dataFactory.createToken(market.id, TokenOutcome.YES);
       await dataFactory.createToken(market.id, TokenOutcome.NO);
 
-      const response = await request(app.getHttpServer())
-        .get('/markets')
-        .expect(200);
+      const response = await request(app.getHttpServer()).get('/markets').expect(200);
 
       expect(response.body.data[0]).toHaveProperty('tokens');
       expect(response.body.data[0].tokens).toHaveLength(2);
@@ -162,9 +158,7 @@ describe('Markets API (e2e)', () => {
         price: '0.4',
       });
 
-      const response = await request(app.getHttpServer())
-        .get(`/markets/${market.id}`)
-        .expect(200);
+      const response = await request(app.getHttpServer()).get(`/markets/${market.id}`).expect(200);
 
       expect(response.body).toMatchObject({
         id: market.id,
@@ -181,26 +175,20 @@ describe('Markets API (e2e)', () => {
       });
       const market = await dataFactory.createMarket(event.id);
 
-      const response = await request(app.getHttpServer())
-        .get(`/markets/${market.id}`)
-        .expect(200);
+      const response = await request(app.getHttpServer()).get(`/markets/${market.id}`).expect(200);
 
       expect(response.body).toHaveProperty('event');
       expect(response.body.event.title).toBe('Presidential Election');
     });
 
     it('should return 404 when market does not exist', async () => {
-      const response = await request(app.getHttpServer())
-        .get('/markets/99999')
-        .expect(404);
+      const response = await request(app.getHttpServer()).get('/markets/99999').expect(404);
 
       expect(response.body.message).toContain('not found');
     });
 
     it('should return 400 for invalid market ID', async () => {
-      await request(app.getHttpServer())
-        .get('/markets/invalid')
-        .expect(400);
+      await request(app.getHttpServer()).get('/markets/invalid').expect(400);
     });
   });
 
@@ -260,9 +248,7 @@ describe('Markets API (e2e)', () => {
         outcomeNoPrice: '0.35',
       });
 
-      const response = await request(app.getHttpServer())
-        .get(`/markets/${market.id}`)
-        .expect(200);
+      const response = await request(app.getHttpServer()).get(`/markets/${market.id}`).expect(200);
 
       expect(response.body.outcomeYesPrice).toBe('0.65000000');
       expect(response.body.outcomeNoPrice).toBe('0.35000000');

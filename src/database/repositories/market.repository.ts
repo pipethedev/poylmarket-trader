@@ -15,10 +15,7 @@ export class MarketRepository extends BaseRepository<Market> {
     super(repository);
   }
 
-  async findByExternalId(
-    externalId: string,
-    provider?: string,
-  ): Promise<Market | null> {
+  async findByExternalId(externalId: string, provider?: string): Promise<Market | null> {
     return this.findOneBy({
       externalId,
       provider: provider ?? this.providerManager.getCurrentProviderName(),

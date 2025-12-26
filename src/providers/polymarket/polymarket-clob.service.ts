@@ -46,7 +46,8 @@ export class PolymarketClobService {
 
   constructor(private readonly configService: ConfigService) {
     const host = this.configService.get<string>('polymarket.clobApiUrl')!;
-    this.enableRealTrading = this.configService.get<boolean>('polymarket.enableRealTrading') ?? false;
+    this.enableRealTrading =
+      this.configService.get<boolean>('polymarket.enableRealTrading') ?? false;
 
     this.client = new ClobClient(host, Chain.POLYGON);
   }
@@ -94,13 +95,17 @@ export class PolymarketClobService {
 
   async placeOrder(params: PlaceOrderParams): Promise<OrderResponse> {
     if (!this.enableRealTrading) {
-      throw new Error('Real trading is not enabled. Set POLYMARKET_ENABLE_REAL_TRADING=true to enable.');
+      throw new Error(
+        'Real trading is not enabled. Set POLYMARKET_ENABLE_REAL_TRADING=true to enable.',
+      );
     }
 
     const client = await this.getAuthenticatedClient();
 
     try {
-      this.logger.log(`Placing order: ${params.side} ${params.size} @ ${params.price} for token ${params.tokenId}`);
+      this.logger.log(
+        `Placing order: ${params.side} ${params.size} @ ${params.price} for token ${params.tokenId}`,
+      );
 
       const orderArgs = {
         tokenID: params.tokenId,

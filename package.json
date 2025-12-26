@@ -8,6 +8,8 @@
   "scripts": {
     "build": "nest build && tsc-alias",
     "format": "prettier --write \"src/**/*.ts\" \"test/**/*.ts\"",
+    "format:check": "prettier --check \"src/**/*.ts\" \"test/**/*.ts\"",
+    "prepare": "husky install",
     "start": "node -r tsconfig-paths/register dist/main",
     "start:dev": "ts-node -r tsconfig-paths/register src/main.ts",
     "start:dev:watch": "nest start --watch --exec \"node -r tsconfig-paths/register\"",
@@ -65,6 +67,7 @@
     "eslint-plugin-prettier": "^5.2.2",
     "eslint-plugin-unused-imports": "^4.3.0",
     "globals": "^16.0.0",
+    "husky": "^9.1.7",
     "jest": "^29.7.0",
     "prettier": "^3.4.2",
     "source-map-support": "^0.5.21",

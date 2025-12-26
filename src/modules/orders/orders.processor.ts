@@ -24,7 +24,8 @@ export class OrdersProcessor extends WorkerHost {
   ) {
     super();
     this.logger = logger.setPrefix(LogPrefix.QUEUE).setContext(OrdersProcessor.name);
-    this.enableRealTrading = this.configService.get<boolean>('polymarket.enableRealTrading') ?? false;
+    this.enableRealTrading =
+      this.configService.get<boolean>('polymarket.enableRealTrading') ?? false;
   }
 
   async process(job: Job<OrderJobData>): Promise<void> {
@@ -242,7 +243,7 @@ export class OrdersProcessor extends WorkerHost {
 
       let marketPrice = parseFloat(market.outcomeNoPrice);
 
-      if(order.outcome === 'YES') {
+      if (order.outcome === 'YES') {
         marketPrice = parseFloat(market.outcomeYesPrice);
       }
 

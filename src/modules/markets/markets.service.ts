@@ -58,7 +58,7 @@ export class MarketsService {
     const tokensByMarket = await this.tokenRepository.findByMarketIds(marketIds);
 
     const tokensMap = new Map<number, Token[]>();
-    
+
     tokensByMarket.forEach((token) => {
       const existing = tokensMap.get(token.marketId) || [];
       existing.push(token);

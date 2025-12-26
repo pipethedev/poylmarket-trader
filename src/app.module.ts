@@ -41,7 +41,15 @@ import { OrdersModule } from '@modules/orders/orders.module';
       inject: [ConfigService],
       useFactory: (configService: ConfigService) => ({
         connection: {
-          url: configService.get<string>('redis.url'),
+          host: configService.get<string>('redis.host'),
+          port: configService.get<number>('redis.port'),
+          ...(configService.get<string>('redis.username') && {
+            username: configService.get<string>('redis.username'),
+          }),
+          ...(configService.get<string>('redis.password') && {
+            password: configService.get<string>('redis.password'),
+          }),
+          ...(configService.get<boolean>('redis.tls') && { tls: {} }),
         },
       }),
     }),

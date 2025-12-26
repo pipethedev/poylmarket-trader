@@ -1,11 +1,6 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { PaginationMetaDto } from '@common/pagination';
-import {
-  OrderSide,
-  OrderType,
-  OrderOutcome,
-  OrderStatus,
-} from '@database/entities/order.entity';
+import { OrderSide, OrderType, OrderOutcome, OrderStatus } from '@database/entities/order.entity';
 
 const OrderSideValues = [...Object.values(OrderSide)];
 const OrderTypeValues = [...Object.values(OrderType)];

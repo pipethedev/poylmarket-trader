@@ -63,7 +63,13 @@ describe('TokenRepository', () => {
 
   describe('findByMarketId', () => {
     it('should find tokens by market id', async () => {
-      const noToken = { ...mockToken, id: 2, tokenId: 'token-no', outcome: TokenOutcome.NO, price: '0.35' };
+      const noToken = {
+        ...mockToken,
+        id: 2,
+        tokenId: 'token-no',
+        outcome: TokenOutcome.NO,
+        price: '0.35',
+      };
       repository.findBy.mockResolvedValue([mockToken, noToken]);
 
       const result = await tokenRepository.findByMarketId(1);
@@ -86,4 +92,3 @@ describe('TokenRepository', () => {
     });
   });
 });
-

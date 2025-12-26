@@ -15,10 +15,7 @@ export class EventRepository extends BaseRepository<Event> {
     super(repository);
   }
 
-  async findByExternalId(
-    externalId: string,
-    provider?: string,
-  ): Promise<Event | null> {
+  async findByExternalId(externalId: string, provider?: string): Promise<Event | null> {
     return this.findOneBy({
       externalId,
       provider: provider ?? this.providerManager.getCurrentProviderName(),

@@ -167,7 +167,9 @@ export class OrdersController {
     status: 404,
     description: 'Order not found',
   })
-  async cancelOrderPost(@Param('orderId', ParseIntPipe) orderId: number): Promise<OrderResponseDto> {
+  async cancelOrderPost(
+    @Param('orderId', ParseIntPipe) orderId: number,
+  ): Promise<OrderResponseDto> {
     return this.ordersService.cancelOrder(orderId);
   }
 }

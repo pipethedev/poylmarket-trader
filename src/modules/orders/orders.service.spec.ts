@@ -4,7 +4,13 @@ import { Queue } from 'bullmq';
 import { getQueueToken } from '@nestjs/bullmq';
 import { OrdersService } from './orders.service';
 import { OrderRepository } from '@database/repositories/order.repository';
-import { Order, OrderStatus, OrderSide, OrderType, OrderOutcome } from '@database/entities/order.entity';
+import {
+  Order,
+  OrderStatus,
+  OrderSide,
+  OrderType,
+  OrderOutcome,
+} from '@database/entities/order.entity';
 import { Market } from '@database/entities/market.entity';
 import { AppLogger } from '@common/logger/app-logger.service';
 import {
@@ -148,7 +154,11 @@ describe('OrdersService', () => {
 
       expect(result.id).toBe(1);
       expect(queryRunner.commitTransaction).toHaveBeenCalled();
-      expect(ordersQueue.add).toHaveBeenCalledWith('process-order', expect.any(Object), expect.any(Object));
+      expect(ordersQueue.add).toHaveBeenCalledWith(
+        'process-order',
+        expect.any(Object),
+        expect.any(Object),
+      );
     });
 
     it('should throw MarketNotFoundException if market not found', async () => {
@@ -308,7 +318,10 @@ describe('OrdersService', () => {
     it('should cancel a pending order', async () => {
       const pendingOrder = { ...mockOrder, status: OrderStatus.PENDING };
       queryRunner.manager.findOne.mockResolvedValue(pendingOrder);
-      queryRunner.manager.save.mockResolvedValue({ ...pendingOrder, status: OrderStatus.CANCELLED });
+      queryRunner.manager.save.mockResolvedValue({
+        ...pendingOrder,
+        status: OrderStatus.CANCELLED,
+      });
 
       const result = await service.cancelOrder(1);
 
@@ -460,4 +473,3 @@ describe('OrdersService', () => {
     });
   });
 });
-

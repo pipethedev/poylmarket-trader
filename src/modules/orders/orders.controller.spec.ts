@@ -102,7 +102,9 @@ describe('OrdersController', () => {
         quantity: '50',
       };
 
-      await expect(controller.createOrder(dto, '')).rejects.toThrow(IdempotencyKeyRequiredException);
+      await expect(controller.createOrder(dto, '')).rejects.toThrow(
+        IdempotencyKeyRequiredException,
+      );
     });
   });
 
@@ -167,4 +169,3 @@ describe('OrdersController', () => {
     });
   });
 });
-

@@ -120,7 +120,9 @@ describe('IdempotencyInterceptor', () => {
       const data = await result.toPromise();
 
       expect(data).toEqual({ created: true });
-      expect(idempotencyService.storeResponse).toHaveBeenCalledWith('new-key', 200, { created: true });
+      expect(idempotencyService.storeResponse).toHaveBeenCalledWith('new-key', 200, {
+        created: true,
+      });
     });
 
     it('should release lock on error', async () => {
@@ -139,4 +141,3 @@ describe('IdempotencyInterceptor', () => {
     });
   });
 });
-

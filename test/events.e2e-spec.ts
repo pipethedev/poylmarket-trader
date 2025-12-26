@@ -28,9 +28,7 @@ describe('Events API (e2e)', () => {
 
   describe('GET /events', () => {
     it('should return empty list when no events exist', async () => {
-      const response = await request(app.getHttpServer())
-        .get('/events')
-        .expect(200);
+      const response = await request(app.getHttpServer()).get('/events').expect(200);
 
       expect(response.body).toEqual({
         data: [],
@@ -104,9 +102,7 @@ describe('Events API (e2e)', () => {
         endDate: pastDate,
       });
 
-      const response = await request(app.getHttpServer())
-        .get('/events')
-        .expect(200);
+      const response = await request(app.getHttpServer()).get('/events').expect(200);
 
       expect(response.body.data).toHaveLength(2);
     });
@@ -131,11 +127,9 @@ describe('Events API (e2e)', () => {
     });
 
     it('should include market count in response', async () => {
-      const { event, markets } = await dataFactory.createCompleteEventWithMarkets();
+      const { markets } = await dataFactory.createCompleteEventWithMarkets();
 
-      const response = await request(app.getHttpServer())
-        .get('/events')
-        .expect(200);
+      const response = await request(app.getHttpServer()).get('/events').expect(200);
 
       expect(response.body.data[0].marketCount).toBe(markets.length);
     });
@@ -145,9 +139,7 @@ describe('Events API (e2e)', () => {
     it('should return event details with markets', async () => {
       const { event, markets } = await dataFactory.createCompleteEventWithMarkets();
 
-      const response = await request(app.getHttpServer())
-        .get(`/events/${event.id}`)
-        .expect(200);
+      const response = await request(app.getHttpServer()).get(`/events/${event.id}`).expect(200);
 
       expect(response.body).toMatchObject({
         id: event.id,
@@ -160,25 +152,19 @@ describe('Events API (e2e)', () => {
     });
 
     it('should return 404 when event does not exist', async () => {
-      const response = await request(app.getHttpServer())
-        .get('/events/99999')
-        .expect(404);
+      const response = await request(app.getHttpServer()).get('/events/99999').expect(404);
 
       expect(response.body.message).toContain('not found');
     });
 
     it('should return 400 for invalid event ID', async () => {
-      await request(app.getHttpServer())
-        .get('/events/invalid')
-        .expect(400);
+      await request(app.getHttpServer()).get('/events/invalid').expect(400);
     });
   });
 
   describe('POST /events/sync', () => {
     it('should trigger sync and return success response', async () => {
-      const response = await request(app.getHttpServer())
-        .post('/events/sync')
-        .expect(200);
+      const response = await request(app.getHttpServer()).post('/events/sync').expect(200);
 
       expect(response.body).toHaveProperty('message');
       expect(response.body).toHaveProperty('syncedEvents');
