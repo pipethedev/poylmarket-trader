@@ -154,5 +154,17 @@ describe('OrdersController', () => {
       expect(service.cancelOrder).toHaveBeenCalledWith(1);
     });
   });
+
+  describe('cancelOrderPost', () => {
+    it('should cancel an order using POST method', async () => {
+      const cancelledOrder = { ...mockOrderResponse, status: OrderStatus.CANCELLED };
+      service.cancelOrder.mockResolvedValue(cancelledOrder);
+
+      const result = await controller.cancelOrderPost(1);
+
+      expect(result.status).toBe(OrderStatus.CANCELLED);
+      expect(service.cancelOrder).toHaveBeenCalledWith(1);
+    });
+  });
 });
 

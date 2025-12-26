@@ -141,4 +141,33 @@ export class OrdersController {
   async cancelOrder(@Param('id', ParseIntPipe) id: number): Promise<OrderResponseDto> {
     return this.ordersService.cancelOrder(id);
   }
+
+  @Post(':orderId/cancel')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Cancel an order (alternative endpoint)',
+    description:
+      'Cancels a pending or queued order using POST method. Orders that are already processing or completed cannot be cancelled.',
+  })
+  @ApiParam({
+    name: 'orderId',
+    description: 'Order ID',
+    example: 1,
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Order cancelled successfully',
+    type: OrderResponseDto,
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Order cannot be cancelled in its current status',
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'Order not found',
+  })
+  async cancelOrderPost(@Param('orderId', ParseIntPipe) orderId: number): Promise<OrderResponseDto> {
+    return this.ordersService.cancelOrder(orderId);
+  }
 }

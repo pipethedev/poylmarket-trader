@@ -5,5 +5,19 @@
   "testRegex": ".e2e-spec.ts$",
   "transform": {
     "^.+\\.(t|j)s$": "ts-jest"
-  }
+  },
+  "transformIgnorePatterns": [
+    "node_modules/(?!(@polymarket/clob-client)/)"
+  ],
+  "moduleNameMapper": {
+    "^@common/(.*)$": "<rootDir>/../src/common/$1",
+    "^@database/(.*)$": "<rootDir>/../src/database/$1",
+    "^@modules/(.*)$": "<rootDir>/../src/modules/$1",
+    "^@providers/(.*)$": "<rootDir>/../src/providers/$1",
+    "^@config/(.*)$": "<rootDir>/../src/config/$1",
+    "^@app-types/(.*)$": "<rootDir>/../src/types/$1",
+    "^@polymarket/clob-client$": "<rootDir>/../__mocks__/@polymarket/clob-client.ts"
+  },
+  "testTimeout": 30000,
+  "maxWorkers": 1
 }

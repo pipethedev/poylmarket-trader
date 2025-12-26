@@ -108,6 +108,7 @@ describe('OrdersService', () => {
           provide: getQueueToken('orders'),
           useValue: {
             add: jest.fn(),
+            getJobs: jest.fn(),
           },
         },
         {
@@ -313,6 +314,57 @@ describe('OrdersService', () => {
 
       expect(result.status).toBe(OrderStatus.CANCELLED);
       expect(queryRunner.commitTransaction).toHaveBeenCalled();
+      expect(ordersQueue.getJobs).not.toHaveBeenCalled(); // Not queued, so no queue removal
+    });
+
+    it('should cancel a queued order and remove from queue', async () => {
+      const queuedOrder = { ...mockOrder, status: OrderStatus.QUEUED };
+      const mockJob = {
+        id: 'job-123',
+        data: { orderId: 1, attempt: 1 },
+        remove: jest.fn().mockResolvedValue(undefined),
+      };
+
+      queryRunner.manager.findOne.mockResolvedValue(queuedOrder);
+      queryRunner.manager.save.mockResolvedValue({ ...queuedOrder, status: OrderStatus.CANCELLED });
+      ordersQueue.getJobs.mockResolvedValue([mockJob] as never);
+
+      const result = await service.cancelOrder(1);
+
+      expect(result.status).toBe(OrderStatus.CANCELLED);
+      expect(queryRunner.commitTransaction).toHaveBeenCalled();
+      expect(ordersQueue.getJobs).toHaveBeenCalledWith(['waiting', 'delayed', 'active']);
+      expect(mockJob.remove).toHaveBeenCalled();
+    });
+
+    it('should handle queue removal when no jobs found', async () => {
+      const queuedOrder = { ...mockOrder, status: OrderStatus.QUEUED };
+
+      queryRunner.manager.findOne.mockResolvedValue(queuedOrder);
+      queryRunner.manager.save.mockResolvedValue({ ...queuedOrder, status: OrderStatus.CANCELLED });
+      ordersQueue.getJobs.mockResolvedValue([] as never);
+
+      const result = await service.cancelOrder(1);
+
+      expect(result.status).toBe(OrderStatus.CANCELLED);
+      expect(ordersQueue.getJobs).toHaveBeenCalled();
+      expect(mockLogger.warn).toHaveBeenCalledWith('No matching jobs found in queue');
+    });
+
+    it('should handle queue removal errors gracefully', async () => {
+      const queuedOrder = { ...mockOrder, status: OrderStatus.QUEUED };
+
+      queryRunner.manager.findOne.mockResolvedValue(queuedOrder);
+      queryRunner.manager.save.mockResolvedValue({ ...queuedOrder, status: OrderStatus.CANCELLED });
+      ordersQueue.getJobs.mockRejectedValue(new Error('Queue error'));
+
+      const result = await service.cancelOrder(1);
+
+      expect(result.status).toBe(OrderStatus.CANCELLED);
+      expect(mockLogger.error).toHaveBeenCalledWith(
+        'Failed to remove order from queue: Queue error',
+        expect.any(String),
+      );
     });
 
     it('should throw OrderNotFoundException if order not found', async () => {

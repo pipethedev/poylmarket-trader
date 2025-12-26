@@ -15,6 +15,7 @@ describe('EventsController', () => {
           useValue: {
             getEvent: jest.fn(),
             getEvents: jest.fn(),
+            getEventMarkets: jest.fn(),
             syncEvents: jest.fn(),
           },
         },
@@ -76,22 +77,45 @@ describe('EventsController', () => {
     });
   });
 
+  describe('getEventMarkets', () => {
+    it('should return markets for an event', async () => {
+      const marketsResponse = [
+        {
+          id: 1,
+          question: 'Will Bitcoin reach $100k?',
+          outcomeYesPrice: '0.65',
+          outcomeNoPrice: '0.35',
+          active: true,
+        },
+        {
+          id: 2,
+          question: 'Will Ethereum reach $10k?',
+          outcomeYesPrice: '0.45',
+          outcomeNoPrice: '0.55',
+          active: true,
+        },
+      ];
+      service.getEventMarkets.mockResolvedValue(marketsResponse);
+
+      const result = await controller.getEventMarkets(1);
+
+      expect(result).toHaveLength(2);
+      expect(result[0].question).toBe('Will Bitcoin reach $100k?');
+      expect(service.getEventMarkets).toHaveBeenCalledWith(1);
+    });
+  });
+
   describe('syncEvents', () => {
     it('should trigger sync and return result', async () => {
       const syncResult = {
-        eventsCreated: 5,
-        eventsUpdated: 10,
-        marketsCreated: 20,
-        marketsUpdated: 15,
-        tokensCreated: 40,
-        tokensUpdated: 30,
-        errors: [],
+        jobId: 'job-123',
+        message: 'Sync job has been queued and will be processed in the background',
       };
       service.syncEvents.mockResolvedValue(syncResult);
 
       const result = await controller.syncEvents();
 
-      expect(result.eventsCreated).toBe(5);
+      expect(result.jobId).toBe('job-123');
       expect(service.syncEvents).toHaveBeenCalled();
     });
   });

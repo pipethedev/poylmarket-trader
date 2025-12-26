@@ -151,10 +151,16 @@ export class OrdersService {
         throw new OrderNotCancellableException(String(id), order.status);
       }
 
+      const wasQueued = order.status === OrderStatus.QUEUED;
+
       order.status = OrderStatus.CANCELLED;
       const savedOrder = await queryRunner.manager.save(Order, order);
 
       await queryRunner.commitTransaction();
+
+      if (wasQueued) {
+        await this.removeOrderFromQueue(id);
+      }
 
       this.logger.log('Order cancelled successfully');
       return OrderFactory.toResponse(savedOrder);
@@ -236,5 +242,31 @@ export class OrdersService {
 
     await this.orderRepository.updateStatus(orderId, OrderStatus.QUEUED);
     this.logger.log('Order queued successfully');
+  }
+
+  private async removeOrderFromQueue(orderId: number): Promise<void> {
+    this.logger.setContextData({ orderId }).log('Removing order from queue');
+
+    try {
+      const jobs = await this.ordersQueue.getJobs(['waiting', 'delayed', 'active']);
+
+      const jobsToRemove = jobs.filter((job) => job.data.orderId === orderId);
+
+      for (const job of jobsToRemove) {
+        await job.remove();
+        this.logger.log(`Removed job ${job.id} from queue`);
+      }
+
+      if (jobsToRemove.length === 0) {
+        this.logger.warn('No matching jobs found in queue');
+      } else {
+        this.logger.log(`Removed ${jobsToRemove.length} job(s) from queue`);
+      }
+    } catch (error) {
+      this.logger.error(
+        `Failed to remove order from queue: ${(error as Error).message}`,
+        (error as Error).stack,
+      );
+    }
   }
 }

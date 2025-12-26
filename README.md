@@ -23,12 +23,41 @@
 
 ## Description
 
-[Nest](https://github.com/nestjs/nest) framework TypeScript starter repository.
+Polymarket Trading Service - A NestJS-based application for integrating with Polymarket prediction markets. This service provides APIs for managing events, markets, and orders with queue-based execution, idempotency, and transactional safety.
+
+## Features
+
+- Event and Market synchronization with Polymarket
+- Queue-based order processing with BullMQ
+- Idempotent order creation and cancellation
+- Transactional safety and optimistic locking
+- Comprehensive test coverage (unit and e2e)
 
 ## Project setup
 
 ```bash
 $ pnpm install
+```
+
+## Environment Setup
+
+Copy the example environment file and configure your settings:
+
+```bash
+$ cp .env.example .env
+```
+
+### Required Services
+
+- PostgreSQL database
+- Redis server (for BullMQ)
+
+### Database Setup
+
+Run migrations to set up the database schema:
+
+```bash
+$ pnpm run migration:run
 ```
 
 ## Compile and run the project
@@ -42,6 +71,9 @@ $ pnpm run start:dev
 
 # production mode
 $ pnpm run start:prod
+
+# run scheduler/worker
+$ pnpm run start:scheduler
 ```
 
 ## Run tests
@@ -50,12 +82,52 @@ $ pnpm run start:prod
 # unit tests
 $ pnpm run test
 
+# unit tests in watch mode
+$ pnpm run test:watch
+
 # e2e tests
 $ pnpm run test:e2e
 
 # test coverage
 $ pnpm run test:cov
 ```
+
+## E2E Testing
+
+The application includes comprehensive end-to-end tests for all API endpoints.
+
+### Test Setup
+
+E2E tests require a running PostgreSQL database and Redis instance. Make sure your `.env` file is properly configured with test database credentials.
+
+### Running E2E Tests
+
+```bash
+# Run all e2e tests
+$ pnpm run test:e2e
+
+# Run specific e2e test file
+$ pnpm run test:e2e -- events.e2e-spec.ts
+```
+
+### Test Coverage
+
+E2E tests cover:
+
+- **Events API**: GET /events, GET /events/:id, POST /events/sync
+- **Markets API**: GET /markets, GET /markets/:id with various filters
+- **Orders API**: POST /orders (with idempotency), GET /orders, GET /orders/:id, DELETE /orders/:id
+
+### Test Structure
+
+- `test/utils/test-app.factory.ts` - Application bootstrapping for tests
+- `test/utils/test-db.helper.ts` - Database cleanup and transaction helpers
+- `test/utils/test-data.factory.ts` - Test data generators
+- `test/*.e2e-spec.ts` - E2E test suites for each module
+
+### Database Cleanup
+
+Tests automatically clean the database before each test case to ensure isolation and consistency.
 
 ## Deployment
 

@@ -86,6 +86,26 @@ export class EventsService {
     };
   }
 
+  async getEventMarkets(eventId: number): Promise<MarketSummaryDto[]> {
+    this.logger.setContextData({ eventId }).log('Fetching markets for event');
+
+    const event = await this.eventRepository.findById(eventId);
+
+    if (!event) {
+      this.logger.warn('Event not found');
+      throw new EventNotFoundException(String(eventId));
+    }
+
+    const markets = await this.marketRepository.findMany({
+      where: { eventId },
+      order: { updatedAt: 'DESC' },
+    });
+
+    this.logger.log(`Found ${markets.length} markets for event`);
+
+    return markets.map((market) => this.mapMarketToSummary(market));
+  }
+
   async syncEvents(limit = 100): Promise<{ jobId: string; message: string }> {
     this.logger.log(`Queuing sync job with limit: ${limit}`);
 

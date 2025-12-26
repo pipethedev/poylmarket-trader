@@ -29,9 +29,11 @@ export class GlobalExceptionFilter implements ExceptionFilter {
 
     if (exception instanceof AppException) {
       status = exception.getStatus();
+      const exceptionResponse = exception.getResponse();
+      const responseBody = typeof exceptionResponse === 'object' ? (exceptionResponse as Record<string, unknown>) : {};
       errorResponse = {
         code: exception.code,
-        message: exception.message,
+        message: (responseBody.message as string) || 'An error occurred',
         details: exception.details,
         timestamp: new Date().toISOString(),
         path: request.url,

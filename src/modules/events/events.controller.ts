@@ -56,6 +56,28 @@ export class EventsController {
     return this.eventsService.getEvent(id);
   }
 
+  @Get(':eventId/markets')
+  @ApiOperation({
+    summary: 'Get markets for an event',
+    description: 'Retrieves all markets associated with a specific event',
+  })
+  @ApiParam({
+    name: 'eventId',
+    description: 'Event ID',
+    example: 1,
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Markets retrieved successfully',
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'Event not found',
+  })
+  async getEventMarkets(@Param('eventId', ParseIntPipe) eventId: number) {
+    return this.eventsService.getEventMarkets(eventId);
+  }
+
   @Post('sync')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({

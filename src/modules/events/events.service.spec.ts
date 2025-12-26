@@ -13,6 +13,7 @@ describe('EventsService', () => {
   let eventRepository: jest.Mocked<EventRepository>;
   let marketRepository: jest.Mocked<MarketRepository>;
   let syncService: jest.Mocked<SyncService>;
+  let module: TestingModule;
 
   const mockLogger = {
     setPrefix: jest.fn().mockReturnThis(),
@@ -63,7 +64,7 @@ describe('EventsService', () => {
   };
 
   beforeEach(async () => {
-    const module: TestingModule = await Test.createTestingModule({
+    module = await Test.createTestingModule({
       providers: [
         EventsService,
         {
@@ -187,23 +188,49 @@ describe('EventsService', () => {
     });
   });
 
+  describe('getEventMarkets', () => {
+    it('should return markets for an event', async () => {
+      eventRepository.findById.mockResolvedValue(mockEvent);
+      marketRepository.findMany.mockResolvedValue([mockMarket]);
+
+      const result = await service.getEventMarkets(1);
+
+      expect(result).toHaveLength(1);
+      expect(result[0].id).toBe(1);
+      expect(result[0].question).toBe('Test question?');
+      expect(eventRepository.findById).toHaveBeenCalledWith(1);
+      expect(marketRepository.findMany).toHaveBeenCalledWith({
+        where: { eventId: 1 },
+        order: { updatedAt: 'DESC' },
+      });
+    });
+
+    it('should throw EventNotFoundException if event not found', async () => {
+      eventRepository.findById.mockResolvedValue(null);
+
+      await expect(service.getEventMarkets(999)).rejects.toThrow(EventNotFoundException);
+    });
+  });
+
   describe('syncEvents', () => {
-    it('should delegate to sync service', async () => {
-      const syncResult = {
-        eventsCreated: 5,
-        eventsUpdated: 10,
-        marketsCreated: 20,
-        marketsUpdated: 15,
-        tokensCreated: 40,
-        tokensUpdated: 30,
-        errors: [],
-      };
-      syncService.syncEvents.mockResolvedValue(syncResult);
+    it('should queue a sync job', async () => {
+      const mockJob = { id: 'job-123' };
+      const syncQueue = module.get('BullQueue_sync');
+      syncQueue.add = jest.fn().mockResolvedValue(mockJob);
 
       const result = await service.syncEvents(100);
 
-      expect(result).toEqual(syncResult);
-      expect(syncService.syncEvents).toHaveBeenCalledWith(100);
+      expect(result).toEqual({
+        jobId: 'job-123',
+        message: 'Sync job has been queued and will be processed in the background',
+      });
+      expect(syncQueue.add).toHaveBeenCalledWith(
+        'sync-events',
+        { limit: 100 },
+        expect.objectContaining({
+          attempts: 3,
+        }),
+      );
     });
   });
 });
