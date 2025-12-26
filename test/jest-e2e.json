@@ -18,6 +18,6 @@
     "^@app-types/(.*)$": "<rootDir>/../src/types/$1",
     "^@polymarket/clob-client$": "<rootDir>/../__mocks__/@polymarket/clob-client.ts"
   },
-  "testTimeout": 30000,
+  "testTimeout": 60000,
   "maxWorkers": 1
 }

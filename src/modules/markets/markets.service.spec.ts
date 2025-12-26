@@ -92,6 +92,7 @@ describe('MarketsService', () => {
           provide: TokenRepository,
           useValue: {
             findByMarketId: jest.fn(),
+            findByMarketIds: jest.fn(),
           },
         },
         {
@@ -148,6 +149,7 @@ describe('MarketsService', () => {
         data: [mockMarket],
         meta: { currentPage: 1, perPage: 20, total: 1, totalPages: 1 },
       });
+      tokenRepository.findByMarketIds.mockResolvedValue([mockToken]);
 
       const result = await service.getMarkets({ page: 1, pageSize: 20 });
 
@@ -165,6 +167,7 @@ describe('MarketsService', () => {
         data: [],
         meta: { currentPage: 1, perPage: 20, total: 0, totalPages: 0 },
       });
+      tokenRepository.findByMarketIds.mockResolvedValue([]);
 
       await service.getMarkets({ eventId: 1 });
 
@@ -183,6 +186,7 @@ describe('MarketsService', () => {
         data: [],
         meta: { currentPage: 1, perPage: 20, total: 0, totalPages: 0 },
       });
+      tokenRepository.findByMarketIds.mockResolvedValue([]);
 
       await service.getMarkets({ active: true });
 
@@ -201,6 +205,7 @@ describe('MarketsService', () => {
         data: [],
         meta: { currentPage: 1, perPage: 20, total: 0, totalPages: 0 },
       });
+      tokenRepository.findByMarketIds.mockResolvedValue([]);
 
       await service.getMarkets({ search: 'test' });
 

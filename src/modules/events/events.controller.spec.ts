@@ -110,6 +110,8 @@ describe('EventsController', () => {
       const syncResult = {
         jobId: 'job-123',
         message: 'Sync job has been queued and will be processed in the background',
+        syncedEvents: 0,
+        syncedMarkets: 0,
       };
       service.syncEvents.mockResolvedValue(syncResult);
 

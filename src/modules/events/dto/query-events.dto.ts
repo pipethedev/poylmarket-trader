@@ -1,5 +1,5 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
-import { IsOptional, IsBoolean, IsInt, Min, Max, IsString } from 'class-validator';
+import { IsOptional, IsBoolean, IsInt, Min, IsString } from 'class-validator';
 import { Type, Transform } from 'class-transformer';
 
 export class QueryEventsDto {
@@ -40,7 +40,7 @@ export class QueryEventsDto {
   @Transform(({ value }) => {
     const num = Number(value);
     if (isNaN(num) || num < 1) return 20;
-    return Math.min(num, 100); // Cap at 100 instead of rejecting
+    return Math.min(num, 100);
   })
   @Type(() => Number)
   @IsInt()

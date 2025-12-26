@@ -2,6 +2,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { EventsService } from './events.service';
 import { EventRepository } from '@database/repositories/event.repository';
 import { MarketRepository } from '@database/repositories/market.repository';
+import { TokenRepository } from '@database/repositories/token.repository';
 import { SyncService } from '@modules/sync/sync.service';
 import { AppLogger } from '@common/logger/app-logger.service';
 import { EventNotFoundException } from '@common/exceptions';
@@ -12,6 +13,7 @@ describe('EventsService', () => {
   let service: EventsService;
   let eventRepository: jest.Mocked<EventRepository>;
   let marketRepository: jest.Mocked<MarketRepository>;
+  let tokenRepository: jest.Mocked<TokenRepository>;
   let syncService: jest.Mocked<SyncService>;
   let module: TestingModule;
 
@@ -85,6 +87,12 @@ describe('EventsService', () => {
           },
         },
         {
+          provide: TokenRepository,
+          useValue: {
+            findByMarketIds: jest.fn(),
+          },
+        },
+        {
           provide: SyncService,
           useValue: {
             syncEvents: jest.fn(),
@@ -106,6 +114,7 @@ describe('EventsService', () => {
     service = module.get<EventsService>(EventsService);
     eventRepository = module.get(EventRepository);
     marketRepository = module.get(MarketRepository);
+    tokenRepository = module.get(TokenRepository);
     syncService = module.get(SyncService);
   });
 
@@ -113,6 +122,7 @@ describe('EventsService', () => {
     it('should return event with markets by id', async () => {
       eventRepository.findById.mockResolvedValue(mockEvent);
       marketRepository.findMany.mockResolvedValue([mockMarket]);
+      tokenRepository.findByMarketIds.mockResolvedValue([]);
 
       const result = await service.getEvent(1);
 
@@ -223,6 +233,8 @@ describe('EventsService', () => {
       expect(result).toEqual({
         jobId: 'job-123',
         message: 'Sync job has been queued and will be processed in the background',
+        syncedEvents: 0,
+        syncedMarkets: 0,
       });
       expect(syncQueue.add).toHaveBeenCalledWith(
         'sync-events',

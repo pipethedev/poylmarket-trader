@@ -11,10 +11,6 @@ import {
 import { Type } from 'class-transformer';
 import { OrderSide, OrderType, OrderOutcome } from '@database/entities/order.entity';
 
-const OrderSideValues = [...Object.values(OrderSide)];
-const OrderTypeValues = [...Object.values(OrderType)];
-const OrderOutcomeValues = [...Object.values(OrderOutcome)];
-
 export class CreateOrderDto {
   @ApiProperty({
     description: 'The ID of the market to place the order on',
@@ -27,26 +23,26 @@ export class CreateOrderDto {
 
   @ApiProperty({
     description: 'Order side - BUY or SELL',
-    enum: OrderSideValues,
+    enum: ['BUY', 'SELL'],
     example: OrderSide.BUY,
   })
-  @IsIn(OrderSideValues, { message: `side must be one of: ${OrderSideValues.join(', ')}` })
+  @IsIn(['BUY', 'SELL'])
   side: OrderSide;
 
   @ApiProperty({
     description: 'Order type - MARKET or LIMIT',
-    enum: OrderTypeValues,
+    enum: ['MARKET', 'LIMIT'],
     example: OrderType.LIMIT,
   })
-  @IsIn(OrderTypeValues, { message: `type must be one of: ${OrderTypeValues.join(', ')}` })
+  @IsIn(['MARKET', 'LIMIT'])
   type: OrderType;
 
   @ApiProperty({
     description: 'Outcome to trade - YES or NO',
-    enum: OrderOutcomeValues,
+    enum: ['YES', 'NO'],
     example: OrderOutcome.YES,
   })
-  @IsIn(OrderOutcomeValues, { message: `outcome must be one of: ${OrderOutcomeValues.join(', ')}` })
+  @IsIn(['YES', 'NO'])
   outcome: OrderOutcome;
 
   @ApiProperty({
