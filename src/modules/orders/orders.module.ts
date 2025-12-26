@@ -3,6 +3,7 @@ import { BullModule } from '@nestjs/bullmq';
 import { OrdersController } from './orders.controller';
 import { OrdersService } from './orders.service';
 import { OrdersProcessor } from './orders.processor';
+import { ProvidersModule } from '@providers/providers.module';
 
 @Module({
   imports: [
@@ -18,6 +19,7 @@ import { OrdersProcessor } from './orders.processor';
         },
       },
     }),
+    ProvidersModule,
   ],
   controllers: [OrdersController],
   providers: [OrdersService, OrdersProcessor],

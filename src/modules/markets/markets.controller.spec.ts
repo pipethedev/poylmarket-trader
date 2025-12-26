@@ -9,7 +9,7 @@ describe('MarketsController', () => {
 
   const mockMarketResponse = {
     id: 1,
-    polymarketId: 'market-123',
+    externalId: 'market-123',
     eventId: 1,
     conditionId: 'condition-456',
     question: 'Test question?',

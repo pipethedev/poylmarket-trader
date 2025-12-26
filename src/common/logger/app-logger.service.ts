@@ -7,7 +7,8 @@ export interface LogContext {
   marketId?: number | string;
   eventId?: number | string;
   polymarketEventId?: string;
-  polymarketId?: string;
+  externalId?: string;
+  provider?: string;
   idempotencyKey?: string;
   jobId?: string | number;
   attempt?: number;

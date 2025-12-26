@@ -2,9 +2,10 @@ import { Event } from '@database/entities/event.entity';
 import type { ProviderEvent } from '@app-types/index';
 
 export class EventFactory {
-  static create(data: ProviderEvent): Partial<Event> {
+  static create(data: ProviderEvent, providerName: string): Partial<Event> {
     return {
-      polymarketId: data.id,
+      externalId: data.id,
+      provider: providerName,
       title: data.title,
       description: data.description ?? null,
       slug: data.slug ?? null,

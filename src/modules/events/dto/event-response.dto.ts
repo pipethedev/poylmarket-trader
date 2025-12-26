@@ -9,10 +9,10 @@ export class EventResponseDto {
   id: number;
 
   @ApiProperty({
-    description: 'Polymarket event ID',
+    description: 'External event ID',
     example: '0x1234567890',
   })
-  polymarketId: string;
+  externalId: string;
 
   @ApiProperty({
     description: 'Event title',

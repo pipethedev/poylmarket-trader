@@ -3,18 +3,26 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Event } from '@database/entities/event.entity';
 import { BaseRepository } from './base.repository';
+import { ProviderManagerService } from '@providers/provider-manager.service';
 
 @Injectable()
 export class EventRepository extends BaseRepository<Event> {
   constructor(
     @InjectRepository(Event)
     repository: Repository<Event>,
+    private readonly providerManager: ProviderManagerService,
   ) {
     super(repository);
   }
 
-  async findByPolymarketId(polymarketId: string): Promise<Event | null> {
-    return this.findOneBy({ polymarketId });
+  async findByExternalId(
+    externalId: string,
+    provider?: string,
+  ): Promise<Event | null> {
+    return this.findOneBy({
+      externalId,
+      provider: provider ?? this.providerManager.getCurrentProviderName(),
+    });
   }
 
   async findActiveEvents(): Promise<Event[]> {

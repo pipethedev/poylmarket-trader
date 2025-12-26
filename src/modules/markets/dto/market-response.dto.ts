@@ -36,10 +36,10 @@ export class MarketResponseDto {
   id: number;
 
   @ApiProperty({
-    description: 'Polymarket market ID',
+    description: 'External market ID',
     example: '0x1234567890',
   })
-  polymarketId: string;
+  externalId: string;
 
   @ApiPropertyOptional({
     description: 'Condition ID',

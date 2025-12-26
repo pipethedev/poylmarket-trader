@@ -26,7 +26,8 @@ describe('EventsService', () => {
 
   const mockEvent: Event = {
     id: 1,
-    polymarketId: 'poly-123',
+    externalId: 'poly-123',
+    provider: 'polymarket',
     title: 'Test Event',
     description: 'Test Description',
     slug: 'test-event',
@@ -41,7 +42,8 @@ describe('EventsService', () => {
 
   const mockMarket: Market = {
     id: 1,
-    polymarketId: 'market-123',
+    externalId: 'market-123',
+    provider: 'polymarket',
     eventId: 1,
     conditionId: 'condition-456',
     question: 'Test question?',
@@ -68,7 +70,7 @@ describe('EventsService', () => {
           provide: EventRepository,
           useValue: {
             findById: jest.fn(),
-            findByPolymarketId: jest.fn(),
+            findByExternalId: jest.fn(),
             findActive: jest.fn(),
             createQueryBuilder: jest.fn(),
             paginate: jest.fn(),
@@ -85,6 +87,12 @@ describe('EventsService', () => {
           provide: SyncService,
           useValue: {
             syncEvents: jest.fn(),
+          },
+        },
+        {
+          provide: 'BullQueue_sync',
+          useValue: {
+            add: jest.fn(),
           },
         },
         {

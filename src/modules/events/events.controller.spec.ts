@@ -1,26 +1,10 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { EventsController } from './events.controller';
 import { EventsService } from './events.service';
-import { Event } from '@database/entities/event.entity';
 
 describe('EventsController', () => {
   let controller: EventsController;
   let service: jest.Mocked<EventsService>;
-
-  const mockEvent: Event = {
-    id: 1,
-    polymarketId: 'poly-123',
-    title: 'Test Event',
-    description: 'Test Description',
-    slug: 'test-event',
-    startDate: new Date('2024-01-01'),
-    endDate: new Date('2024-12-31'),
-    active: true,
-    metadata: null,
-    createdAt: new Date(),
-    updatedAt: new Date(),
-    markets: [],
-  };
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
@@ -45,7 +29,7 @@ describe('EventsController', () => {
     it('should return event by id', async () => {
       const eventResponse = {
         id: 1,
-        polymarketId: 'poly-123',
+        externalId: 'poly-123',
         title: 'Test Event',
         description: 'Test Description',
         slug: 'test-event',
@@ -70,7 +54,7 @@ describe('EventsController', () => {
         data: [
           {
             id: 1,
-            polymarketId: 'poly-123',
+            externalId: 'poly-123',
             title: 'Test Event',
             description: null,
             slug: null,

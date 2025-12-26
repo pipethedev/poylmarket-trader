@@ -3,6 +3,7 @@ import { getRepositoryToken } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { MarketRepository } from './market.repository';
 import { Market } from '@database/entities/market.entity';
+import { ProviderManagerService } from '@providers/provider-manager.service';
 
 describe('MarketRepository', () => {
   let marketRepository: MarketRepository;
@@ -10,7 +11,8 @@ describe('MarketRepository', () => {
 
   const mockMarket: Market = {
     id: 1,
-    polymarketId: 'market-123',
+    externalId: 'market-123',
+    provider: 'polymarket',
     eventId: 1,
     conditionId: 'condition-456',
     question: 'Test question?',
@@ -44,6 +46,12 @@ describe('MarketRepository', () => {
             manager: {},
           },
         },
+        {
+          provide: ProviderManagerService,
+          useValue: {
+            getCurrentProviderName: jest.fn().mockReturnValue('polymarket'),
+          },
+        },
       ],
     }).compile();
 
@@ -51,14 +59,17 @@ describe('MarketRepository', () => {
     repository = module.get(getRepositoryToken(Market));
   });
 
-  describe('findByPolymarketId', () => {
-    it('should find market by polymarket id', async () => {
+  describe('findByExternalId', () => {
+    it('should find market by external id', async () => {
       repository.findOneBy.mockResolvedValue(mockMarket);
 
-      const result = await marketRepository.findByPolymarketId('market-123');
+      const result = await marketRepository.findByExternalId('market-123');
 
       expect(result).toEqual(mockMarket);
-      expect(repository.findOneBy).toHaveBeenCalledWith({ polymarketId: 'market-123' });
+      expect(repository.findOneBy).toHaveBeenCalledWith({
+        externalId: 'market-123',
+        provider: 'polymarket',
+      });
     });
   });
 
@@ -93,7 +104,7 @@ describe('MarketRepository', () => {
       expect(result).toHaveLength(1);
       expect(repository.find).toHaveBeenCalledWith({
         where: { active: true },
-        select: ['id', 'polymarketId', 'conditionId'],
+        select: ['id', 'externalId', 'conditionId'],
       });
     });
   });

@@ -15,13 +15,19 @@ import { Order } from './order.entity';
 
 @Entity('markets')
 @Index('idx_markets_event_active', ['eventId', 'active'])
+@Index('idx_markets_provider_external_id', ['provider', 'externalId'], {
+  unique: true,
+})
 export class Market {
   @PrimaryGeneratedColumn()
   id: number;
 
-  @Column({ name: 'polymarket_id', unique: true })
-  @Index('idx_markets_polymarket_id')
-  polymarketId: string;
+  @Column({ name: 'external_id' })
+  @Index('idx_markets_external_id')
+  externalId: string;
+
+  @Column({ default: 'polymarket' })
+  provider: string;
 
   @Column({ name: 'condition_id', type: 'varchar', nullable: true })
   @Index('idx_markets_condition_id')

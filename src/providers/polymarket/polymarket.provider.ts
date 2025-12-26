@@ -10,6 +10,8 @@ import type {
   ProviderMarket,
   MarketPrice,
   ProviderToken,
+  OrderRequest,
+  OrderResult,
 } from '@app-types/index';
 import { PolymarketHttpService } from './polymarket-http.service';
 import { PolymarketClobService } from './polymarket-clob.service';
@@ -27,6 +29,10 @@ export class PolymarketProvider implements MarketProvider {
     logger: AppLogger,
   ) {
     this.logger = logger.setPrefix(LogPrefix.PROVIDER).setContext(PolymarketProvider.name);
+  }
+
+  getName(): string {
+    return this.providerName;
   }
 
   async getEvents(params?: EventQueryParams): Promise<ProviderEvent[]> {
@@ -111,6 +117,60 @@ export class PolymarketProvider implements MarketProvider {
 
   async healthCheck(): Promise<boolean> {
     return this.clob.healthCheck();
+  }
+
+  async placeOrder(order: OrderRequest): Promise<OrderResult> {
+    try {
+      this.logger
+        .setContextData({ marketId: order.marketId })
+        .log(`Placing ${order.side} order for ${order.outcome} outcome`);
+
+      const market = (await this.clob.getMarket(order.marketId)) as ClobMarketData;
+
+      if (!market) {
+        throw new Error(`Market ${order.marketId} not found`);
+      }
+
+      const outcomeString = order.outcome === 'YES' ? 'Yes' : 'No';
+      const token = market.tokens?.find((t: ClobToken) => t.outcome === outcomeString);
+
+      if (!token) {
+        throw new Error(`Token for ${order.outcome} outcome not found in market ${order.marketId}`);
+      }
+
+      const tickSizeData = await this.clob.getTickSize(token.token_id);
+
+      let orderPrice: number;
+      if (order.type === 'MARKET') {
+        orderPrice = token.price ?? parseFloat(order.outcome === 'YES' ? '0.5' : '0.5');
+      } else {
+        if (!order.price) {
+          throw new Error('Limit orders require a price');
+        }
+        orderPrice = parseFloat(order.price);
+      }
+
+      const response = await this.clob.placeOrder({
+        tokenId: token.token_id,
+        price: orderPrice,
+        side: order.side,
+        size: parseFloat(order.quantity),
+        tickSize: tickSizeData,
+        negRisk: market.neg_risk ?? false,
+      });
+
+      this.logger.log(`Order placed successfully with ID: ${response.orderID}`);
+
+      return {
+        orderId: response.orderID,
+        status: 'PENDING',
+        filledQuantity: '0',
+        message: 'Order placed successfully',
+      };
+    } catch (error) {
+      this.logger.error(`Failed to place order: ${(error as Error).message}`);
+      throw this.handleError(error, 'placeOrder');
+    }
   }
 
   private mapEventToProvider(event: PolymarketGammaEvent): ProviderEvent {
@@ -259,7 +319,6 @@ export class PolymarketProvider implements MarketProvider {
   }
 }
 
-// Internal types for CLOB API responses
 interface ClobToken {
   token_id: string;
   outcome: string;
@@ -276,5 +335,6 @@ interface ClobMarketData {
   market_slug?: string;
   minimum_order_size?: string;
   minimum_tick_size?: string;
+  neg_risk?: boolean;
   tokens?: ClobToken[];
 }

@@ -84,6 +84,7 @@ export type OrderStatus = {
 
 export type MarketProvider = {
   readonly providerName: string;
+  getName(): string;
   getEvents(params?: EventQueryParams): Promise<ProviderEvent[]>;
   getMarkets(eventId: string, params?: MarketQueryParams): Promise<ProviderMarket[]>;
   getAllMarkets(params?: MarketQueryParams): Promise<ProviderMarket[]>;

@@ -21,9 +21,10 @@ describe('MarketFactory', () => {
 
   describe('create', () => {
     it('should create market data from provider market', () => {
-      const result = MarketFactory.create(mockProviderMarket, 1);
+      const result = MarketFactory.create(mockProviderMarket, 1, 'polymarket');
 
-      expect(result.polymarketId).toBe('market-123');
+      expect(result.externalId).toBe('market-123');
+      expect(result.provider).toBe('polymarket');
       expect(result.eventId).toBe(1);
       expect(result.conditionId).toBe('condition-789');
       expect(result.question).toBe('Will it rain tomorrow?');
@@ -49,9 +50,10 @@ describe('MarketFactory', () => {
         tokens: [],
       };
 
-      const result = MarketFactory.create(minimalMarket, 2);
+      const result = MarketFactory.create(minimalMarket, 2, 'polymarket');
 
-      expect(result.polymarketId).toBe('market-456');
+      expect(result.externalId).toBe('market-456');
+      expect(result.provider).toBe('polymarket');
       expect(result.eventId).toBe(2);
       expect(result.conditionId).toBeNull();
       expect(result.description).toBeNull();
@@ -65,7 +67,7 @@ describe('MarketFactory', () => {
     it('should update existing market with provider data', () => {
       const existingMarket = new Market();
       existingMarket.id = 1;
-      existingMarket.polymarketId = 'market-123';
+      existingMarket.externalId = 'market-123';
       existingMarket.question = 'Old question?';
       existingMarket.outcomeYesPrice = '0.40';
 

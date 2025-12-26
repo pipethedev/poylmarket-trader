@@ -1,20 +1,18 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { DataSource, QueryRunner } from 'typeorm';
 import { SyncService } from './sync.service';
-import { EventRepository } from '@database/repositories/event.repository';
 import { MarketRepository } from '@database/repositories/market.repository';
 import { TokenRepository } from '@database/repositories/token.repository';
 import { MARKET_PROVIDER } from '@providers/market-provider.interface';
 import { AppLogger } from '@common/logger/app-logger.service';
 import { Event } from '@database/entities/event.entity';
 import { Market } from '@database/entities/market.entity';
-import { Token, TokenOutcome } from '@database/entities/token.entity';
+import { Token } from '@database/entities/token.entity';
 import type { ProviderEvent, ProviderMarket, MarketProvider } from '@app-types/index';
 
 describe('SyncService', () => {
   let service: SyncService;
   let marketProvider: jest.Mocked<MarketProvider>;
-  let eventRepository: jest.Mocked<EventRepository>;
   let marketRepository: jest.Mocked<MarketRepository>;
   let tokenRepository: jest.Mocked<TokenRepository>;
   let dataSource: jest.Mocked<DataSource>;
@@ -70,9 +68,9 @@ describe('SyncService', () => {
       release: jest.fn(),
       manager: {
         findOne: jest.fn(),
-        create: jest.fn((entity, data) => data),
-        save: jest.fn((entity, data) => ({ id: 1, ...data })),
-      },
+        create: jest.fn().mockImplementation((_, data) => data),
+        save: jest.fn().mockImplementation((_, data) => ({ id: 1, ...data })),
+      } as any,
     } as unknown as jest.Mocked<QueryRunner>;
 
     dataSource = {
@@ -85,14 +83,11 @@ describe('SyncService', () => {
         {
           provide: MARKET_PROVIDER,
           useValue: {
+            getName: jest.fn().mockReturnValue('polymarket'),
             getEvents: jest.fn(),
             getMarkets: jest.fn(),
             getMarketPrice: jest.fn(),
           },
-        },
-        {
-          provide: EventRepository,
-          useValue: {},
         },
         {
           provide: MarketRepository,
@@ -144,7 +139,7 @@ describe('SyncService', () => {
 
       const existingEvent = new Event();
       existingEvent.id = 1;
-      existingEvent.polymarketId = 'poly-event-123';
+      existingEvent.externalId = 'poly-event-123';
       queryRunner.manager.findOne.mockResolvedValue(existingEvent);
 
       const result = await service.syncEvents(100);
@@ -197,7 +192,7 @@ describe('SyncService', () => {
     it('should update existing event', async () => {
       const existingEvent = new Event();
       existingEvent.id = 1;
-      existingEvent.polymarketId = 'poly-event-123';
+      existingEvent.externalId = 'poly-event-123';
       queryRunner.manager.findOne.mockResolvedValue(existingEvent);
       queryRunner.manager.save.mockResolvedValue(existingEvent);
 
@@ -258,7 +253,7 @@ describe('SyncService', () => {
       const activeMarket = {
         id: 1,
         conditionId: 'condition-123',
-        polymarketId: 'market-123',
+        externalId: 'market-123',
       } as Market;
 
       marketRepository.findActiveMarketsWithPriceInfo.mockResolvedValue([activeMarket]);
@@ -280,7 +275,7 @@ describe('SyncService', () => {
     });
 
     it('should skip markets not found on provider', async () => {
-      const activeMarket = { id: 1, conditionId: 'c1', polymarketId: 'm1' } as Market;
+      const activeMarket = { id: 1, conditionId: 'c1', externalId: 'm1' } as Market;
       marketRepository.findActiveMarketsWithPriceInfo.mockResolvedValue([activeMarket]);
       marketProvider.getMarketPrice.mockResolvedValue(null);
 
@@ -292,7 +287,7 @@ describe('SyncService', () => {
     });
 
     it('should handle price update errors', async () => {
-      const activeMarket = { id: 1, conditionId: 'c1', polymarketId: 'm1' } as Market;
+      const activeMarket = { id: 1, conditionId: 'c1', externalId: 'm1' } as Market;
       marketRepository.findActiveMarketsWithPriceInfo.mockResolvedValue([activeMarket]);
       marketProvider.getMarketPrice.mockRejectedValue(new Error('Price fetch failed'));
 

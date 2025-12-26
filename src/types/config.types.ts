@@ -7,13 +7,17 @@ export type DatabaseConfig = {
 };
 
 export type RedisConfig = {
-  host: string;
-  port: number;
+  url: string;
 };
 
 export type PolymarketConfig = {
   clobApiUrl: string;
   gammaApiUrl: string;
+  walletPrivateKey?: string;
+  funderAddress?: string;
+  signatureType?: number;
+  chainId?: number;
+  enableRealTrading?: boolean;
 };
 
 export type SchedulerConfig = {
@@ -23,6 +27,7 @@ export type SchedulerConfig = {
 
 export type AppConfig = {
   port: number;
+  defaultProvider: string;
   database: DatabaseConfig;
   redis: RedisConfig;
   polymarket: PolymarketConfig;

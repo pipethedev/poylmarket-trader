@@ -10,6 +10,7 @@ import {
   TokenRepository,
   OrderRepository,
 } from './repositories/index';
+import { ProvidersModule } from '@providers/providers.module';
 
 const entities = [Event, Market, Token, Order];
 
@@ -17,7 +18,7 @@ const repositories = [EventRepository, MarketRepository, TokenRepository, OrderR
 
 @Global()
 @Module({
-  imports: [TypeOrmModule.forFeature(entities)],
+  imports: [TypeOrmModule.forFeature(entities), ProvidersModule],
   providers: [...repositories],
   exports: [TypeOrmModule, ...repositories],
 })

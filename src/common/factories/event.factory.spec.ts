@@ -16,9 +16,10 @@ describe('EventFactory', () => {
 
   describe('create', () => {
     it('should create event data from provider event', () => {
-      const result = EventFactory.create(mockProviderEvent);
+      const result = EventFactory.create(mockProviderEvent, 'polymarket');
 
-      expect(result.polymarketId).toBe('polymarket-123');
+      expect(result.externalId).toBe('polymarket-123');
+      expect(result.provider).toBe('polymarket');
       expect(result.title).toBe('Test Event');
       expect(result.description).toBe('Test Description');
       expect(result.slug).toBe('test-event');
@@ -35,9 +36,10 @@ describe('EventFactory', () => {
         active: false,
       };
 
-      const result = EventFactory.create(minimalEvent);
+      const result = EventFactory.create(minimalEvent, 'polymarket');
 
-      expect(result.polymarketId).toBe('polymarket-456');
+      expect(result.externalId).toBe('polymarket-456');
+      expect(result.provider).toBe('polymarket');
       expect(result.title).toBe('Minimal Event');
       expect(result.description).toBeNull();
       expect(result.slug).toBeNull();
@@ -52,14 +54,14 @@ describe('EventFactory', () => {
     it('should update existing event with provider data', () => {
       const existingEvent = new Event();
       existingEvent.id = 1;
-      existingEvent.polymarketId = 'polymarket-123';
+      existingEvent.externalId = 'polymarket-123';
       existingEvent.title = 'Old Title';
       existingEvent.active = false;
 
       const result = EventFactory.update(existingEvent, mockProviderEvent);
 
       expect(result.id).toBe(1);
-      expect(result.polymarketId).toBe('polymarket-123');
+      expect(result.externalId).toBe('polymarket-123');
       expect(result.title).toBe('Test Event');
       expect(result.description).toBe('Test Description');
       expect(result.slug).toBe('test-event');

@@ -15,6 +15,7 @@ describe('TokenRepository', () => {
     marketId: 1,
     outcome: TokenOutcome.YES,
     price: '0.65',
+    metadata: null,
     createdAt: new Date(),
     updatedAt: new Date(),
     market: {} as Market,

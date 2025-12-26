@@ -3,18 +3,26 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Market } from '@database/entities/market.entity';
 import { BaseRepository } from './base.repository';
+import { ProviderManagerService } from '@providers/provider-manager.service';
 
 @Injectable()
 export class MarketRepository extends BaseRepository<Market> {
   constructor(
     @InjectRepository(Market)
     repository: Repository<Market>,
+    private readonly providerManager: ProviderManagerService,
   ) {
     super(repository);
   }
 
-  async findByPolymarketId(polymarketId: string): Promise<Market | null> {
-    return this.findOneBy({ polymarketId });
+  async findByExternalId(
+    externalId: string,
+    provider?: string,
+  ): Promise<Market | null> {
+    return this.findOneBy({
+      externalId,
+      provider: provider ?? this.providerManager.getCurrentProviderName(),
+    });
   }
 
   async findByEventId(eventId: number): Promise<Market[]> {
@@ -26,11 +34,11 @@ export class MarketRepository extends BaseRepository<Market> {
   }
 
   async findActiveMarketsWithPriceInfo(): Promise<
-    Pick<Market, 'id' | 'polymarketId' | 'conditionId'>[]
+    Pick<Market, 'id' | 'externalId' | 'conditionId'>[]
   > {
     return this.findMany({
       where: { active: true },
-      select: ['id', 'polymarketId', 'conditionId'],
+      select: ['id', 'externalId', 'conditionId'],
     });
   }
 

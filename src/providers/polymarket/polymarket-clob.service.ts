@@ -1,6 +1,15 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { ClobClient, Chain, type OrderBookSummary, type TickSize } from '@polymarket/clob-client';
+import {
+  ClobClient,
+  Chain,
+  Side,
+  OrderType,
+  type OrderBookSummary,
+  type TickSize,
+  ApiKeyCreds,
+} from '@polymarket/clob-client';
+import { Wallet } from '@ethersproject/wallet';
 
 export interface PaginationPayload {
   data: unknown[];
@@ -13,12 +22,31 @@ export interface PriceResponse {
   price: string;
 }
 
+export interface PlaceOrderParams {
+  tokenId: string;
+  price: number;
+  side: 'BUY' | 'SELL';
+  size: number;
+  tickSize: string;
+  negRisk: boolean;
+}
+
+export interface OrderResponse {
+  orderID: string;
+  status?: string;
+  error?: string;
+}
+
 @Injectable()
 export class PolymarketClobService {
+  private readonly logger = new Logger(PolymarketClobService.name);
   private readonly client: ClobClient;
+  private authenticatedClient: ClobClient | null = null;
+  private readonly enableRealTrading: boolean;
 
   constructor(private readonly configService: ConfigService) {
     const host = this.configService.get<string>('polymarket.clobApiUrl')!;
+    this.enableRealTrading = this.configService.get<boolean>('polymarket.enableRealTrading') ?? false;
 
     this.client = new ClobClient(host, Chain.POLYGON);
   }
@@ -62,5 +90,89 @@ export class PolymarketClobService {
 
   async getTickSize(tokenId: string): Promise<TickSize> {
     return this.client.getTickSize(tokenId);
+  }
+
+  async placeOrder(params: PlaceOrderParams): Promise<OrderResponse> {
+    if (!this.enableRealTrading) {
+      throw new Error('Real trading is not enabled. Set POLYMARKET_ENABLE_REAL_TRADING=true to enable.');
+    }
+
+    const client = await this.getAuthenticatedClient();
+
+    try {
+      this.logger.log(`Placing order: ${params.side} ${params.size} @ ${params.price} for token ${params.tokenId}`);
+
+      const orderArgs = {
+        tokenID: params.tokenId,
+        price: params.price,
+        side: params.side === 'BUY' ? Side.BUY : Side.SELL,
+        size: params.size,
+        feeRateBps: 0,
+      };
+
+      const response = await client.createAndPostOrder(
+        orderArgs,
+        {
+          tickSize: params.tickSize as TickSize,
+          negRisk: params.negRisk,
+        },
+        OrderType.GTC,
+      );
+
+      this.logger.log(`Order placed successfully: ${response.orderID}`);
+
+      return {
+        orderID: response.orderID,
+        status: response.status,
+      };
+    } catch (error) {
+      this.logger.error(`Error placing order: ${(error as Error).message}`, (error as Error).stack);
+      throw error;
+    }
+  }
+
+  private async getAuthenticatedClient(): Promise<ClobClient> {
+    if (this.authenticatedClient) {
+      return this.authenticatedClient;
+    }
+
+    const privateKey = this.configService.get<string>('polymarket.walletPrivateKey');
+    const funderAddress = this.configService.get<string>('polymarket.funderAddress');
+    const signatureType = this.configService.get<number>('polymarket.signatureType') ?? 1;
+    const chainId = this.configService.get<number>('polymarket.chainId') ?? 137;
+
+    if (!privateKey) {
+      throw new Error('POLYMARKET_WALLET_PRIVATE_KEY is required for placing orders');
+    }
+
+    if (!funderAddress) {
+      throw new Error('POLYMARKET_FUNDER_ADDRESS is required for placing orders');
+    }
+
+    const host = this.configService.get<string>('polymarket.clobApiUrl')!;
+    const wallet = new Wallet(privateKey);
+
+    this.logger.log('Initializing authenticated CLOB client...');
+
+    const tempClient = new ClobClient(host, chainId, wallet);
+
+    const creds: ApiKeyCreds = await tempClient.createOrDeriveApiKey();
+
+    this.authenticatedClient = new ClobClient(
+      host,
+      chainId,
+      wallet,
+      creds,
+      signatureType,
+      funderAddress,
+    );
+
+    this.logger.log('Authenticated CLOB client initialized successfully');
+
+    return this.authenticatedClient;
+  }
+
+  isRealTradingEnabled(): boolean {
+    return this.enableRealTrading;
   }
 }

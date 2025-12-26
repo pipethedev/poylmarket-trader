@@ -10,13 +10,19 @@ import {
 import { Market } from './market.entity';
 
 @Entity('events')
+@Index('idx_events_provider_external_id', ['provider', 'externalId'], {
+  unique: true,
+})
 export class Event {
   @PrimaryGeneratedColumn()
   id: number;
 
-  @Column({ name: 'polymarket_id', unique: true })
-  @Index('idx_events_polymarket_id')
-  polymarketId: string;
+  @Column({ name: 'external_id' })
+  @Index('idx_events_external_id')
+  externalId: string;
+
+  @Column({ default: 'polymarket' })
+  provider: string;
 
   @Column()
   title: string;

@@ -83,14 +83,17 @@ export class MarketsService {
     };
   }
 
-  async getMarketByPolymarketId(polymarketId: string): Promise<MarketDetailResponseDto> {
-    this.logger.setContextData({ polymarketId }).log('Fetching market by polymarket ID');
+  async getMarketByExternalId(
+    externalId: string,
+    provider = 'polymarket',
+  ): Promise<MarketDetailResponseDto> {
+    this.logger.setContextData({ externalId, provider }).log('Fetching market by external ID');
 
-    const market = await this.marketRepository.findByPolymarketId(polymarketId);
+    const market = await this.marketRepository.findByExternalId(externalId, provider);
 
     if (!market) {
       this.logger.warn('Market not found');
-      throw new MarketNotFoundException(polymarketId);
+      throw new MarketNotFoundException(externalId);
     }
 
     return this.getMarket(market.id);
@@ -99,7 +102,7 @@ export class MarketsService {
   private mapToResponse(market: Market): MarketResponseDto {
     return {
       id: market.id,
-      polymarketId: market.polymarketId,
+      externalId: market.externalId,
       conditionId: market.conditionId,
       eventId: market.eventId,
       question: market.question,

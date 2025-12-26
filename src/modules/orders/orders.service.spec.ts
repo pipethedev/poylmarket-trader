@@ -54,7 +54,8 @@ describe('OrdersService', () => {
 
   const mockMarket: Market = {
     id: 1,
-    polymarketId: 'market-123',
+    externalId: 'market-123',
+    provider: 'polymarket',
     eventId: 1,
     conditionId: 'condition-456',
     question: 'Test?',
@@ -84,7 +85,7 @@ describe('OrdersService', () => {
         findOne: jest.fn(),
         create: jest.fn(),
         save: jest.fn(),
-      },
+      } as any,
     } as unknown as jest.Mocked<QueryRunner>;
 
     dataSource = {
@@ -221,7 +222,7 @@ describe('OrdersService', () => {
       orderRepository.createQueryBuilder.mockReturnValue(mockQueryBuilder as never);
       orderRepository.paginate.mockResolvedValue({
         data: [mockOrder],
-        meta: { page: 1, size: 20, total: 1, totalPages: 1, hasNext: false, hasPrevious: false },
+        meta: { currentPage: 1, perPage: 20, total: 1, totalPages: 1 },
       });
 
       const result = await service.getOrders({ page: 1, pageSize: 20 });
@@ -237,7 +238,7 @@ describe('OrdersService', () => {
       orderRepository.createQueryBuilder.mockReturnValue(mockQueryBuilder as never);
       orderRepository.paginate.mockResolvedValue({
         data: [],
-        meta: { page: 1, size: 20, total: 0, totalPages: 0, hasNext: false, hasPrevious: false },
+        meta: { currentPage: 1, perPage: 20, total: 0, totalPages: 0 },
       });
 
       await service.getOrders({ status: OrderStatus.FILLED });
@@ -255,7 +256,7 @@ describe('OrdersService', () => {
       orderRepository.createQueryBuilder.mockReturnValue(mockQueryBuilder as never);
       orderRepository.paginate.mockResolvedValue({
         data: [],
-        meta: { page: 1, size: 20, total: 0, totalPages: 0, hasNext: false, hasPrevious: false },
+        meta: { currentPage: 1, perPage: 20, total: 0, totalPages: 0 },
       });
 
       await service.getOrders({ marketId: 1 });
@@ -273,7 +274,7 @@ describe('OrdersService', () => {
       orderRepository.createQueryBuilder.mockReturnValue(mockQueryBuilder as never);
       orderRepository.paginate.mockResolvedValue({
         data: [],
-        meta: { page: 1, size: 20, total: 0, totalPages: 0, hasNext: false, hasPrevious: false },
+        meta: { currentPage: 1, perPage: 20, total: 0, totalPages: 0 },
       });
 
       await service.getOrders({ side: OrderSide.BUY });
@@ -291,7 +292,7 @@ describe('OrdersService', () => {
       orderRepository.createQueryBuilder.mockReturnValue(mockQueryBuilder as never);
       orderRepository.paginate.mockResolvedValue({
         data: [],
-        meta: { page: 1, size: 20, total: 0, totalPages: 0, hasNext: false, hasPrevious: false },
+        meta: { currentPage: 1, perPage: 20, total: 0, totalPages: 0 },
       });
 
       await service.getOrders({ outcome: OrderOutcome.YES });

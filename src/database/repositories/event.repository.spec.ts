@@ -3,6 +3,7 @@ import { getRepositoryToken } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { EventRepository } from './event.repository';
 import { Event } from '@database/entities/event.entity';
+import { ProviderManagerService } from '@providers/provider-manager.service';
 
 describe('EventRepository', () => {
   let eventRepository: EventRepository;
@@ -10,7 +11,8 @@ describe('EventRepository', () => {
 
   const mockEvent: Event = {
     id: 1,
-    polymarketId: 'poly-123',
+    externalId: 'poly-123',
+    provider: 'polymarket',
     title: 'Test Event',
     description: 'Test Description',
     slug: 'test-event',
@@ -36,6 +38,12 @@ describe('EventRepository', () => {
             manager: {},
           },
         },
+        {
+          provide: ProviderManagerService,
+          useValue: {
+            getCurrentProviderName: jest.fn().mockReturnValue('polymarket'),
+          },
+        },
       ],
     }).compile();
 
@@ -43,20 +51,23 @@ describe('EventRepository', () => {
     repository = module.get(getRepositoryToken(Event));
   });
 
-  describe('findByPolymarketId', () => {
-    it('should find event by polymarket id', async () => {
+  describe('findByExternalId', () => {
+    it('should find event by external id', async () => {
       repository.findOneBy.mockResolvedValue(mockEvent);
 
-      const result = await eventRepository.findByPolymarketId('poly-123');
+      const result = await eventRepository.findByExternalId('poly-123');
 
       expect(result).toEqual(mockEvent);
-      expect(repository.findOneBy).toHaveBeenCalledWith({ polymarketId: 'poly-123' });
+      expect(repository.findOneBy).toHaveBeenCalledWith({
+        externalId: 'poly-123',
+        provider: 'polymarket',
+      });
     });
 
     it('should return null if not found', async () => {
       repository.findOneBy.mockResolvedValue(null);
 
-      const result = await eventRepository.findByPolymarketId('non-existent');
+      const result = await eventRepository.findByExternalId('non-existent');
 
       expect(result).toBeNull();
     });

@@ -31,6 +31,7 @@ describe('MarketsService', () => {
     marketId: 1,
     outcome: TokenOutcome.YES,
     price: '0.65',
+    metadata: null,
     createdAt: new Date(),
     updatedAt: new Date(),
     market: {} as Market,
@@ -38,7 +39,8 @@ describe('MarketsService', () => {
 
   const mockMarket: Market = {
     id: 1,
-    polymarketId: 'market-123',
+    externalId: 'market-123',
+    provider: 'polymarket',
     eventId: 1,
     conditionId: 'condition-456',
     question: 'Test question?',
@@ -59,7 +61,7 @@ describe('MarketsService', () => {
 
   const mockEvent: Event = {
     id: 1,
-    polymarketId: 'event-123',
+    externalId: 'event-123',
     title: 'Test Event',
     description: 'Event description',
     slug: 'test-event',
@@ -80,7 +82,7 @@ describe('MarketsService', () => {
           provide: MarketRepository,
           useValue: {
             findById: jest.fn(),
-            findByPolymarketId: jest.fn(),
+            findByExternalId: jest.fn(),
             findByEventId: jest.fn(),
             createQueryBuilder: jest.fn(),
             paginate: jest.fn(),
@@ -208,23 +210,23 @@ describe('MarketsService', () => {
     });
   });
 
-  describe('getMarketByPolymarketId', () => {
+  describe('getMarketByExternalId', () => {
     it('should return market by polymarket id', async () => {
-      marketRepository.findByPolymarketId.mockResolvedValue(mockMarket);
+      marketRepository.findByExternalId.mockResolvedValue(mockMarket);
       marketRepository.findById.mockResolvedValue(mockMarket);
       tokenRepository.findByMarketId.mockResolvedValue([mockToken]);
       eventRepository.findById.mockResolvedValue(mockEvent);
 
-      const result = await service.getMarketByPolymarketId('market-123');
+      const result = await service.getMarketByExternalId('market-123');
 
-      expect(result.polymarketId).toBe('market-123');
-      expect(marketRepository.findByPolymarketId).toHaveBeenCalledWith('market-123');
+      expect(result.externalId).toBe('market-123');
+      expect(marketRepository.findByExternalId).toHaveBeenCalledWith('market-123', 'polymarket');
     });
 
     it('should throw MarketNotFoundException if not found', async () => {
-      marketRepository.findByPolymarketId.mockResolvedValue(null);
+      marketRepository.findByExternalId.mockResolvedValue(null);
 
-      await expect(service.getMarketByPolymarketId('non-existent')).rejects.toThrow(
+      await expect(service.getMarketByExternalId('non-existent')).rejects.toThrow(
         MarketNotFoundException,
       );
     });

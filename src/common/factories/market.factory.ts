@@ -2,9 +2,14 @@ import { Market } from '@database/entities/market.entity';
 import type { ProviderMarket } from '@app-types/index';
 
 export class MarketFactory {
-  static create(data: ProviderMarket, eventId: number): Partial<Market> {
+  static create(
+    data: ProviderMarket,
+    eventId: number,
+    providerName: string,
+  ): Partial<Market> {
     return {
-      polymarketId: data.id,
+      externalId: data.id,
+      provider: providerName,
       eventId,
       conditionId: data.conditionId ?? null,
       question: data.question,

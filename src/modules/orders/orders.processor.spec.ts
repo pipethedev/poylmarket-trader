@@ -1,4 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing';
+import { ConfigService } from '@nestjs/config';
 import { DataSource, QueryRunner } from 'typeorm';
 import { Job } from 'bullmq';
 import { OrdersProcessor } from './orders.processor';
@@ -7,6 +8,7 @@ import { MarketRepository } from '@database/repositories/market.repository';
 import { Order, OrderStatus, OrderSide, OrderType, OrderOutcome } from '@database/entities/order.entity';
 import { Market } from '@database/entities/market.entity';
 import { AppLogger } from '@common/logger/app-logger.service';
+import { MARKET_PROVIDER } from '@providers/market-provider.interface';
 
 describe('OrdersProcessor', () => {
   let processor: OrdersProcessor;
@@ -47,7 +49,8 @@ describe('OrdersProcessor', () => {
 
   const mockMarket: Market = {
     id: 1,
-    polymarketId: 'market-123',
+    externalId: 'market-123',
+    provider: 'polymarket',
     eventId: 1,
     conditionId: 'condition-456',
     question: 'Test?',
@@ -99,6 +102,20 @@ describe('OrdersProcessor', () => {
         {
           provide: DataSource,
           useValue: dataSource,
+        },
+        {
+          provide: MARKET_PROVIDER,
+          useValue: {
+            getName: jest.fn().mockReturnValue('polymarket'),
+            placeOrder: jest.fn(),
+            cancelOrder: jest.fn(),
+          },
+        },
+        {
+          provide: ConfigService,
+          useValue: {
+            get: jest.fn().mockReturnValue(false),
+          },
         },
         {
           provide: AppLogger,
@@ -182,6 +199,40 @@ describe('OrdersProcessor', () => {
 
       expect(queryRunner.commitTransaction).toHaveBeenCalled();
     });
+
+    it('should handle NO outcome order', async () => {
+      const noOutcomeOrder = { ...mockOrder, outcome: 'NO' };
+      const job = { data: { orderId: 1, attempt: 1 }, id: 'job-1' } as Job;
+      queryRunner.manager.findOne
+        .mockResolvedValueOnce(noOutcomeOrder)
+        .mockResolvedValueOnce({ ...mockMarket });
+      queryRunner.manager.save.mockImplementation((entity, data) => Promise.resolve(data));
+
+      await processor.process(job);
+
+      expect(queryRunner.commitTransaction).toHaveBeenCalled();
+    });
+
+    it('should handle SELL order', async () => {
+      const sellOrder = { ...mockOrder, side: 'SELL' };
+      const job = { data: { orderId: 1, attempt: 1 }, id: 'job-1' } as Job;
+      queryRunner.manager.findOne
+        .mockResolvedValueOnce(sellOrder)
+        .mockResolvedValueOnce({ ...mockMarket });
+      queryRunner.manager.save.mockImplementation((entity, data) => Promise.resolve(data));
+
+      await processor.process(job);
+
+      expect(queryRunner.commitTransaction).toHaveBeenCalled();
+    });
+
+    it('should handle errors during processing', async () => {
+      const job = { data: { orderId: 1, attempt: 1 }, id: 'job-1' } as Job;
+      queryRunner.manager.findOne.mockRejectedValue(new Error('Database error'));
+
+      await expect(processor.process(job)).rejects.toThrow('Database error');
+      expect(queryRunner.rollbackTransaction).toHaveBeenCalled();
+    });
   });
 
   describe('onFailed', () => {
@@ -214,6 +265,23 @@ describe('OrdersProcessor', () => {
       await processor.onFailed(job, error);
 
       expect(orderRepository.markAsFailed).not.toHaveBeenCalled();
+    });
+
+    it('should use default 3 attempts when opts.attempts is undefined', async () => {
+      const job = {
+        data: { orderId: 1 },
+        id: 'job-1',
+        attemptsMade: 3,
+        opts: {},
+      } as unknown as Job;
+      const error = new Error('Processing failed');
+
+      await processor.onFailed(job, error);
+
+      expect(orderRepository.markAsFailed).toHaveBeenCalledWith(
+        1,
+        expect.stringContaining('Processing failed after 3 attempts'),
+      );
     });
   });
 

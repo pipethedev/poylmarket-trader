@@ -1,24 +1,30 @@
 import { Processor, WorkerHost, OnWorkerEvent } from '@nestjs/bullmq';
+import { Inject } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { DataSource } from 'typeorm';
 import { Job } from 'bullmq';
-import { OrderRepository, MarketRepository } from '@database/repositories/index';
+import { OrderRepository } from '@database/repositories/index';
 import { Order, OrderStatus, OrderType } from '@database/entities/order.entity';
 import { Market } from '@database/entities/market.entity';
 import { AppLogger, LogPrefix } from '@common/logger/index';
-import type { OrderJobData } from '@app-types/index';
+import type { OrderJobData, MarketProvider, OrderRequest } from '@app-types/index';
+import { MARKET_PROVIDER } from '@providers/market-provider.interface';
 
 @Processor('orders')
 export class OrdersProcessor extends WorkerHost {
   private readonly logger: AppLogger;
+  private readonly enableRealTrading: boolean;
 
   constructor(
     private readonly orderRepository: OrderRepository,
-    private readonly marketRepository: MarketRepository,
     private readonly dataSource: DataSource,
+    @Inject(MARKET_PROVIDER) private readonly marketProvider: MarketProvider,
+    private readonly configService: ConfigService,
     logger: AppLogger,
   ) {
     super();
     this.logger = logger.setPrefix(LogPrefix.QUEUE).setContext(OrdersProcessor.name);
+    this.enableRealTrading = this.configService.get<boolean>('polymarket.enableRealTrading') ?? false;
   }
 
   async process(job: Job<OrderJobData>): Promise<void> {
@@ -67,7 +73,7 @@ export class OrdersProcessor extends WorkerHost {
         return;
       }
 
-      const executionResult = await this.simulateExecution(order, market);
+      const executionResult = await this.executeOrder(order, market, jobLogger);
 
       if (executionResult.success && executionResult.fillPrice) {
         order.status = OrderStatus.FILLED;
@@ -138,6 +144,71 @@ export class OrdersProcessor extends WorkerHost {
     logger.warn(`Order failed: ${reason}`);
   }
 
+  private async executeOrder(
+    order: Order,
+    market: Market,
+    logger: AppLogger,
+  ): Promise<{
+    success: boolean;
+    fillPrice?: string;
+    externalOrderId?: string;
+    reason?: string;
+  }> {
+    if (this.enableRealTrading) {
+      return this.executeRealOrder(order, market, logger);
+    } else {
+      return this.simulateExecution(order, market);
+    }
+  }
+
+  private async executeRealOrder(
+    order: Order,
+    market: Market,
+    logger: AppLogger,
+  ): Promise<{
+    success: boolean;
+    fillPrice?: string;
+    externalOrderId?: string;
+    reason?: string;
+  }> {
+    try {
+      if (!market.conditionId) {
+        return {
+          success: false,
+          reason: 'Market condition ID not found',
+        };
+      }
+
+      logger.log('Executing real order on Polymarket');
+
+      const orderRequest: OrderRequest = {
+        marketId: market.conditionId,
+        side: order.side,
+        type: order.type,
+        outcome: order.outcome,
+        quantity: order.quantity,
+        price: order.price ?? undefined,
+      };
+
+      const result = await this.marketProvider.placeOrder!(orderRequest);
+
+      logger.log(`Real order placed with external ID: ${result.orderId}`);
+
+      return {
+        success: result.status === 'FILLED' || result.status === 'PENDING',
+        fillPrice: result.averagePrice || order.price || '0',
+        externalOrderId: result.orderId,
+        reason: result.message,
+      };
+    } catch (error) {
+      logger.error(`Real order execution failed: ${(error as Error).message}`);
+      return {
+        success: false,
+        reason: `Real execution failed: ${(error as Error).message}`,
+      };
+    }
+  }
+
   private async simulateExecution(
     order: Order,
     market: Market,
@@ -169,10 +240,12 @@ export class OrdersProcessor extends WorkerHost {
         };
       }
 
-      const marketPrice =
-        order.outcome === 'YES'
-          ? parseFloat(market.outcomeYesPrice)
-          : parseFloat(market.outcomeNoPrice);
+      let marketPrice = parseFloat(market.outcomeNoPrice);
+
+      if(order.outcome === 'YES') {
+        marketPrice = parseFloat(market.outcomeYesPrice);
+      }
+
       const limitPrice = parseFloat(order.price);
 
       if (order.side === 'BUY' && marketPrice > limitPrice) {

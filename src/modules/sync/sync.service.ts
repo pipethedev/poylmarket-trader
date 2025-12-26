@@ -83,8 +83,10 @@ export class SyncService {
   }
 
   async syncEvent(providerEvent: ProviderEvent): Promise<{ event: Event; created: boolean }> {
+    const providerName = this.marketProvider.getName();
     const eventLogger = this.logger.child({
       polymarketEventId: providerEvent.id,
+      provider: providerName,
     });
     eventLogger.log('Syncing event');
 
@@ -94,7 +96,7 @@ export class SyncService {
 
     try {
       let event: Event | null = await queryRunner.manager.findOne(Event, {
-        where: { polymarketId: providerEvent.id },
+        where: { externalId: providerEvent.id, provider: providerName },
       });
 
       const created = !event;
@@ -103,7 +105,7 @@ export class SyncService {
         EventFactory.update(event, providerEvent);
         eventLogger.log('Updating existing event');
       } else {
-        event = queryRunner.manager.create(Event, EventFactory.create(providerEvent));
+        event = queryRunner.manager.create(Event, EventFactory.create(providerEvent, providerName));
         eventLogger.log('Creating new event');
       }
 
@@ -174,13 +176,14 @@ export class SyncService {
     tokensCreated: number;
     tokensUpdated: number;
   }> {
+    const providerName = this.marketProvider.getName();
     const queryRunner = this.dataSource.createQueryRunner();
     await queryRunner.connect();
     await queryRunner.startTransaction();
 
     try {
       let market: Market | null = await queryRunner.manager.findOne(Market, {
-        where: { polymarketId: providerMarket.id },
+        where: { externalId: providerMarket.id, provider: providerName },
       });
 
       const created = !market;
@@ -192,7 +195,7 @@ export class SyncService {
       } else {
         market = queryRunner.manager.create(
           Market,
-          MarketFactory.create(providerMarket, localEventId),
+          MarketFactory.create(providerMarket, localEventId, providerName),
         );
       }
 
@@ -235,7 +238,7 @@ export class SyncService {
 
       for (const market of activeMarkets) {
         try {
-          const marketId = market.conditionId || market.polymarketId;
+          const marketId = market.conditionId || market.externalId;
           const price = await this.marketProvider.getMarketPrice(marketId);
 
           if (!price) {

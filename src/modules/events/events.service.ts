@@ -1,4 +1,6 @@
 import { Injectable } from '@nestjs/common';
+import { InjectQueue } from '@nestjs/bullmq';
+import { Queue } from 'bullmq';
 import { EventRepository, MarketRepository } from '@database/repositories/index';
 import { Event } from '@database/entities/event.entity';
 import { Market } from '@database/entities/market.entity';
@@ -11,9 +13,7 @@ import {
   EventDetailResponseDto,
   MarketSummaryDto,
 } from './dto/event-response.dto';
-import { SyncResult, SyncService } from '@modules/sync/sync.service';
-
-export type { SyncResult };
+import type { SyncJobData } from '@modules/sync/sync.processor';
 
 @Injectable()
 export class EventsService {
@@ -22,7 +22,8 @@ export class EventsService {
   constructor(
     private readonly eventRepository: EventRepository,
     private readonly marketRepository: MarketRepository,
-    private readonly syncService: SyncService,
+    @InjectQueue('sync')
+    private readonly syncQueue: Queue<SyncJobData>,
     logger: AppLogger,
   ) {
     this.logger = logger.setPrefix(LogPrefix.API).setContext(EventsService.name);
@@ -85,15 +86,38 @@ export class EventsService {
     };
   }
 
-  async syncEvents(limit = 100): Promise<SyncResult> {
-    this.logger.log(`Starting manual sync with limit: ${limit}`);
-    return this.syncService.syncEvents(limit);
+  async syncEvents(limit = 100): Promise<{ jobId: string; message: string }> {
+    this.logger.log(`Queuing sync job with limit: ${limit}`);
+
+    const job = await this.syncQueue.add(
+      'sync-events',
+      { limit },
+      {
+        attempts: 3,
+        backoff: {
+          type: 'exponential',
+          delay: 2000,
+        },
+        removeOnComplete: {
+          age: 3600,
+          count: 100,
+        },
+        removeOnFail: false,
+      },
+    );
+
+    this.logger.log(`Sync job queued with ID: ${job.id}`);
+
+    return {
+      jobId: job.id!,
+      message: 'Sync job has been queued and will be processed in the background',
+    };
   }
 
   private mapToResponse(event: Event): EventResponseDto {
     return {
       id: event.id,
-      polymarketId: event.polymarketId,
+      externalId: event.externalId,
       title: event.title,
       description: event.description,
       slug: event.slug,

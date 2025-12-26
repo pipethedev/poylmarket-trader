@@ -2,45 +2,14 @@ import { ApiProperty } from '@nestjs/swagger';
 
 export class SyncResponseDto {
   @ApiProperty({
-    description: 'Number of events created',
-    example: 5,
+    description: 'Job ID for tracking the sync operation',
+    example: '1234567890',
   })
-  eventsCreated: number;
+  jobId: string;
 
   @ApiProperty({
-    description: 'Number of events updated',
-    example: 10,
+    description: 'Message describing the sync operation status',
+    example: 'Sync job has been queued and will be processed in the background',
   })
-  eventsUpdated: number;
-
-  @ApiProperty({
-    description: 'Number of markets created',
-    example: 15,
-  })
-  marketsCreated: number;
-
-  @ApiProperty({
-    description: 'Number of markets updated',
-    example: 25,
-  })
-  marketsUpdated: number;
-
-  @ApiProperty({
-    description: 'Number of tokens created',
-    example: 30,
-  })
-  tokensCreated: number;
-
-  @ApiProperty({
-    description: 'Number of tokens updated',
-    example: 50,
-  })
-  tokensUpdated: number;
-
-  @ApiProperty({
-    description: 'List of errors encountered during sync',
-    example: [],
-    type: [String],
-  })
-  errors: string[];
+  message: string;
 }

@@ -41,8 +41,7 @@ import { OrdersModule } from '@modules/orders/orders.module';
       inject: [ConfigService],
       useFactory: (configService: ConfigService) => ({
         connection: {
-          host: configService.get<string>('redis.host'),
-          port: configService.get<number>('redis.port'),
+          url: configService.get<string>('redis.url'),
         },
       }),
     }),
