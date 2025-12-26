@@ -9,6 +9,9 @@ export default (): AppConfig => ({
     username: process.env.DATABASE_USERNAME ?? 'postgres',
     password: process.env.DATABASE_PASSWORD ?? 'postgres',
     database: process.env.DATABASE_NAME ?? 'polymarket_trader',
+    ssl: process.env.DATABASE_SSL === 'true',
+    sslMode: process.env.PGSSLMODE,
+    channelBinding: process.env.PGCHANNELBINDING,
   },
   redis: {
     host: process.env.REDIS_HOST ?? 'localhost',

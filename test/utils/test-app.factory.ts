@@ -48,4 +48,8 @@ export class TestAppFactory {
   static getConfigService(): ConfigService {
     return this.moduleFixture.get<ConfigService>(ConfigService);
   }
+
+  static getModuleRef(): TestingModule {
+    return this.moduleFixture;
+  }
 }

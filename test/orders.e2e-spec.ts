@@ -1,23 +1,80 @@
 import { INestApplication } from '@nestjs/common';
 import request from 'supertest';
 import { DataSource } from 'typeorm';
+import { getQueueToken } from '@nestjs/bullmq';
+import { Queue } from 'bullmq';
 import { TestAppFactory } from './utils/test-app.factory';
 import { TestDbHelper } from './utils/test-db.helper';
 import { TestDataFactory } from './utils/test-data.factory';
 import { TokenOutcome } from '@database/entities/token.entity';
-import { OrderOutcome, OrderStatus, OrderType, OrderSide } from '@database/entities/order.entity';
+import {
+  OrderOutcome,
+  OrderStatus,
+  OrderType,
+  OrderSide,
+  Order,
+} from '@database/entities/order.entity';
+import { OrderRepository } from '@database/repositories/order.repository';
 
 describe('Orders API (e2e)', () => {
   let app: INestApplication;
   let dataSource: DataSource;
   let dbHelper: TestDbHelper;
   let dataFactory: TestDataFactory;
+  let ordersQueue: Queue;
+  let orderRepository: OrderRepository;
+
+  async function waitForOrderStatus(
+    orderId: number,
+    expectedStatus: OrderStatus,
+    timeout = 10000,
+    interval = 200,
+  ): Promise<Order> {
+    const startTime = Date.now();
+    while (Date.now() - startTime < timeout) {
+      const order = await orderRepository.findById(orderId);
+      if (order && order.status === expectedStatus) {
+        return order;
+      }
+      await new Promise((resolve) => setTimeout(resolve, interval));
+    }
+    const order = await orderRepository.findById(orderId);
+    throw new Error(
+      `Order ${orderId} did not reach status ${expectedStatus} within ${timeout}ms. Current status: ${order?.status}`,
+    );
+  }
+
+  async function waitForQueueEmpty(timeout = 10000, interval = 200): Promise<void> {
+    const startTime = Date.now();
+    while (Date.now() - startTime < timeout) {
+      const [waiting, active, delayed] = await Promise.all([
+        ordersQueue.getWaitingCount(),
+        ordersQueue.getActiveCount(),
+        ordersQueue.getDelayedCount(),
+      ]);
+      if (waiting === 0 && active === 0 && delayed === 0) {
+        return;
+      }
+      await new Promise((resolve) => setTimeout(resolve, interval));
+    }
+    const [waiting, active, delayed] = await Promise.all([
+      ordersQueue.getWaitingCount(),
+      ordersQueue.getActiveCount(),
+      ordersQueue.getDelayedCount(),
+    ]);
+    throw new Error(
+      `Queue not empty within ${timeout}ms. Waiting: ${waiting}, Active: ${active}, Delayed: ${delayed}`,
+    );
+  }
 
   beforeAll(async () => {
     app = await TestAppFactory.createApp();
     dataSource = TestAppFactory.getDataSource();
     dbHelper = new TestDbHelper(dataSource);
     dataFactory = new TestDataFactory(dataSource);
+    const moduleRef = TestAppFactory.getModuleRef();
+    ordersQueue = moduleRef.get<Queue>(getQueueToken('orders'));
+    orderRepository = moduleRef.get(OrderRepository);
   });
 
   afterAll(async () => {
@@ -26,6 +83,7 @@ describe('Orders API (e2e)', () => {
 
   beforeEach(async () => {
     await dbHelper.cleanDatabase();
+    await ordersQueue.obliterate({ force: true });
   });
 
   describe('POST /orders', () => {
@@ -43,8 +101,12 @@ describe('Orders API (e2e)', () => {
           side: OrderSide.BUY,
           type: OrderType.MARKET,
           quantity: '10',
-        })
-        .expect(201);
+        });
+
+      if (response.status !== 201) {
+        console.error('Order creation failed:', response.status, response.body);
+      }
+      expect(response.status).toBe(201);
 
       expect(response.body).toMatchObject({
         marketId: market.id,
@@ -114,14 +176,12 @@ describe('Orders API (e2e)', () => {
         quantity: '10',
       };
 
-      // First request
       const response1 = await request(app.getHttpServer())
         .post('/orders')
         .set('Idempotency-Key', idempotencyKey)
         .send(orderData)
         .expect(201);
 
-      // Second request with same idempotency key
       const response2 = await request(app.getHttpServer())
         .post('/orders')
         .set('Idempotency-Key', idempotencyKey)
@@ -136,7 +196,6 @@ describe('Orders API (e2e)', () => {
       const market = await dataFactory.createMarket(event.id);
       const idempotencyKey = `conflict-key-${Date.now()}`;
 
-      // First request
       await request(app.getHttpServer())
         .post('/orders')
         .set('Idempotency-Key', idempotencyKey)
@@ -149,7 +208,6 @@ describe('Orders API (e2e)', () => {
         })
         .expect(201);
 
-      // Second request with same key but different parameters
       await request(app.getHttpServer())
         .post('/orders')
         .set('Idempotency-Key', idempotencyKey)
@@ -189,7 +247,7 @@ describe('Orders API (e2e)', () => {
           outcome: OrderOutcome.YES,
           side: OrderSide.BUY,
           type: OrderType.MARKET,
-          quantity: '-10', // Invalid negative quantity
+          quantity: '-10',
         })
         .expect(400);
     });
@@ -207,7 +265,6 @@ describe('Orders API (e2e)', () => {
           side: OrderSide.BUY,
           type: OrderType.LIMIT,
           quantity: '10',
-          // Missing price
         })
         .expect(400);
     });
@@ -419,6 +476,180 @@ describe('Orders API (e2e)', () => {
 
       expect(response.body).toHaveProperty('id', order.id);
       expect(response.body).toHaveProperty('status');
+    });
+  });
+
+  describe('Queue-based order execution', () => {
+    it('should execute order via queue and verify status transitions', async () => {
+      const event = await dataFactory.createEvent();
+      const market = await dataFactory.createMarket(event.id, {
+        outcomeYesPrice: '0.65',
+        outcomeNoPrice: '0.35',
+      });
+      await dataFactory.createToken(market.id, TokenOutcome.YES);
+
+      const createResponse = await request(app.getHttpServer())
+        .post('/orders')
+        .set('Idempotency-Key', `queue-test-${Date.now()}`)
+        .send({
+          marketId: market.id,
+          outcome: OrderOutcome.YES,
+          side: OrderSide.BUY,
+          type: OrderType.MARKET,
+          quantity: '10',
+        })
+        .expect(201);
+
+      const orderId = createResponse.body.id;
+
+      expect(createResponse.body.status).toBe(OrderStatus.PENDING);
+
+      await waitForOrderStatus(orderId, OrderStatus.QUEUED, 5000);
+
+      const processedOrder = await waitForOrderStatus(orderId, OrderStatus.FILLED, 15000);
+
+      expect(processedOrder.status).toBe(OrderStatus.FILLED);
+      expect(processedOrder.filledQuantity).toBe('10');
+      expect(processedOrder.averageFillPrice).toBeTruthy();
+      expect(processedOrder.externalOrderId).toBeTruthy();
+
+      await waitForQueueEmpty(5000);
+    });
+
+    it('should handle order execution failure via queue', async () => {
+      const event = await dataFactory.createEvent();
+      const market = await dataFactory.createMarket(event.id, {
+        active: false,
+        outcomeYesPrice: '0.65',
+        outcomeNoPrice: '0.35',
+      });
+      await dataFactory.createToken(market.id, TokenOutcome.YES);
+
+      const createResponse = await request(app.getHttpServer())
+        .post('/orders')
+        .set('Idempotency-Key', `failure-test-${Date.now()}`)
+        .send({
+          marketId: market.id,
+          outcome: OrderOutcome.YES,
+          side: OrderSide.BUY,
+          type: OrderType.MARKET,
+          quantity: '10',
+        })
+        .expect(201);
+
+      const orderId = createResponse.body.id;
+
+      await waitForOrderStatus(orderId, OrderStatus.QUEUED, 5000);
+
+      const failedOrder = await waitForOrderStatus(orderId, OrderStatus.FAILED, 15000);
+
+      expect(failedOrder.status).toBe(OrderStatus.FAILED);
+      expect(failedOrder.failureReason).toBeTruthy();
+      expect(failedOrder.failureReason).toContain('not active');
+    });
+
+    it('should handle limit order failure when price is not met', async () => {
+      const event = await dataFactory.createEvent();
+      const market = await dataFactory.createMarket(event.id, {
+        outcomeYesPrice: '0.70', // Market price is 0.70
+        outcomeNoPrice: '0.30',
+      });
+      await dataFactory.createToken(market.id, TokenOutcome.YES);
+
+      const createResponse = await request(app.getHttpServer())
+        .post('/orders')
+        .set('Idempotency-Key', `limit-failure-test-${Date.now()}`)
+        .send({
+          marketId: market.id,
+          outcome: OrderOutcome.YES,
+          side: OrderSide.BUY,
+          type: OrderType.LIMIT,
+          quantity: '10',
+          price: '0.60',
+        })
+        .expect(201);
+
+      const orderId = createResponse.body.id;
+
+      await waitForOrderStatus(orderId, OrderStatus.QUEUED, 5000);
+
+      const failedOrder = await waitForOrderStatus(orderId, OrderStatus.FAILED, 15000);
+
+      expect(failedOrder.status).toBe(OrderStatus.FAILED);
+      expect(failedOrder.failureReason).toBeTruthy();
+      expect(failedOrder.failureReason).toContain('price');
+    });
+
+    it('should verify order status transitions through QUEUED -> PROCESSING -> FILLED', async () => {
+      const event = await dataFactory.createEvent();
+      const market = await dataFactory.createMarket(event.id, {
+        outcomeYesPrice: '0.65',
+        outcomeNoPrice: '0.35',
+      });
+      await dataFactory.createToken(market.id, TokenOutcome.YES);
+
+      const createResponse = await request(app.getHttpServer())
+        .post('/orders')
+        .set('Idempotency-Key', `transition-test-${Date.now()}`)
+        .send({
+          marketId: market.id,
+          outcome: OrderOutcome.YES,
+          side: OrderSide.BUY,
+          type: OrderType.MARKET,
+          quantity: '10',
+        })
+        .expect(201);
+
+      const orderId = createResponse.body.id;
+
+      let order = await orderRepository.findById(orderId);
+      expect(order?.status).toBe(OrderStatus.PENDING);
+
+      order = await waitForOrderStatus(orderId, OrderStatus.QUEUED, 5000);
+      expect(order.status).toBe(OrderStatus.QUEUED);
+
+      order = await waitForOrderStatus(orderId, OrderStatus.PROCESSING, 2000);
+      expect(order.status).toBe(OrderStatus.PROCESSING);
+
+      order = await waitForOrderStatus(orderId, OrderStatus.FILLED, 15000);
+      expect(order.status).toBe(OrderStatus.FILLED);
+      expect(order.filledQuantity).toBe('10');
+      expect(order.averageFillPrice).toBeTruthy();
+    });
+
+    it('should handle cancelling order before queue execution', async () => {
+      const event = await dataFactory.createEvent();
+      const market = await dataFactory.createMarket(event.id, {
+        outcomeYesPrice: '0.65',
+        outcomeNoPrice: '0.35',
+      });
+      await dataFactory.createToken(market.id, TokenOutcome.YES);
+
+      const createResponse = await request(app.getHttpServer())
+        .post('/orders')
+        .set('Idempotency-Key', `cancel-before-exec-${Date.now()}`)
+        .send({
+          marketId: market.id,
+          outcome: OrderOutcome.YES,
+          side: OrderSide.BUY,
+          type: OrderType.MARKET,
+          quantity: '10',
+        })
+        .expect(201);
+
+      const orderId = createResponse.body.id;
+
+      await waitForOrderStatus(orderId, OrderStatus.QUEUED, 5000);
+
+      const cancelResponse = await request(app.getHttpServer())
+        .delete(`/orders/${orderId}`)
+        .expect(200);
+
+      expect(cancelResponse.body.status).toBe(OrderStatus.CANCELLED);
+
+      await new Promise((resolve) => setTimeout(resolve, 2000));
+      const order = await orderRepository.findById(orderId);
+      expect(order?.status).toBe(OrderStatus.CANCELLED);
     });
   });
 });

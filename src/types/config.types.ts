@@ -4,6 +4,9 @@ export type DatabaseConfig = {
   username: string;
   password: string;
   database: string;
+  ssl: boolean;
+  sslMode?: string;
+  channelBinding?: string;
 };
 
 export type RedisConfig = {

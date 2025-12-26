@@ -22,18 +22,36 @@ import { OrdersModule } from '@modules/orders/orders.module';
     TypeOrmModule.forRootAsync({
       imports: [ConfigModule],
       inject: [ConfigService],
-      useFactory: (configService: ConfigService) => ({
-        type: 'postgres',
-        host: configService.get<string>('database.host'),
-        port: configService.get<number>('database.port'),
-        username: configService.get<string>('database.username'),
-        password: configService.get<string>('database.password'),
-        database: configService.get<string>('database.database'),
-        entities: [__dirname + '/database/entities/*.entity{.ts,.js}'],
-        migrations: [__dirname + '/database/migrations/*{.ts,.js}'],
-        synchronize: false,
-        logging: process.env.NODE_ENV === 'development',
-      }),
+      useFactory: (configService: ConfigService) => {
+        const ssl = configService.get<boolean>('database.ssl');
+        const sslMode = configService.get<string>('database.sslMode');
+        const channelBinding = configService.get<string>('database.channelBinding');
+
+        return {
+          type: 'postgres',
+          host: configService.get<string>('database.host'),
+          port: configService.get<number>('database.port'),
+          username: configService.get<string>('database.username'),
+          password: configService.get<string>('database.password'),
+          database: configService.get<string>('database.database'),
+          entities: [__dirname + '/database/entities/*.entity{.ts,.js}'],
+          migrations: [__dirname + '/database/migrations/*{.ts,.js}'],
+          synchronize: false,
+          logging: process.env.NODE_ENV === 'development',
+          ...(ssl && {
+            ssl: {
+              rejectUnauthorized: sslMode === 'require',
+            },
+          }),
+          ...(sslMode && { extra: { sslmode: sslMode } }),
+          ...(channelBinding && {
+            extra: {
+              ...(sslMode && { sslmode: sslMode }),
+              channel_binding: channelBinding,
+            },
+          }),
+        };
+      },
     }),
 
     BullModule.forRootAsync({

@@ -42,7 +42,6 @@ describe('Events API (e2e)', () => {
     });
 
     it('should return paginated list of events', async () => {
-      // Create test events
       await dataFactory.createEvent({
         title: 'Event 1',
         slug: 'event-1',
@@ -213,7 +212,6 @@ describe('Events API (e2e)', () => {
         .query({ limit: 1000 })
         .expect(200);
 
-      // Assuming max limit is 100
       expect(response.body.meta.perPage).toBeLessThanOrEqual(100);
     });
 
