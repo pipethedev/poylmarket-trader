@@ -86,10 +86,9 @@ export class CreateOrderDto {
     description: 'Limit price (required for LIMIT orders)',
     example: '0.65000000',
   })
-  @IsOptional()
   @ValidateIf((o: CreateOrderDto) => o.type === OrderType.LIMIT)
-  @IsNumberString()
   @IsNotEmpty({ message: 'Price is required for LIMIT orders' })
+  @IsNumberString()
   price?: string;
 
   @ApiPropertyOptional({
