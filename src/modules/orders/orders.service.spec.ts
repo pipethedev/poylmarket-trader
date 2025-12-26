@@ -1,0 +1,262 @@
+import { Test, TestingModule } from '@nestjs/testing';
+import { DataSource, QueryRunner } from 'typeorm';
+import { Queue } from 'bullmq';
+import { getQueueToken } from '@nestjs/bullmq';
+import { OrdersService } from './orders.service';
+import { OrderRepository } from '@database/repositories/order.repository';
+import { Order, OrderStatus, OrderSide, OrderType, OrderOutcome } from '@database/entities/order.entity';
+import { Market } from '@database/entities/market.entity';
+import { AppLogger } from '@common/logger/app-logger.service';
+import {
+  OrderNotFoundException,
+  OrderNotCancellableException,
+  MarketNotFoundException,
+  MarketNotActiveException,
+} from '@common/exceptions';
+
+describe('OrdersService', () => {
+  let service: OrdersService;
+  let orderRepository: jest.Mocked<OrderRepository>;
+  let ordersQueue: jest.Mocked<Queue>;
+  let dataSource: jest.Mocked<DataSource>;
+  let queryRunner: jest.Mocked<QueryRunner>;
+
+  const mockLogger = {
+    setPrefix: jest.fn().mockReturnThis(),
+    setContext: jest.fn().mockReturnThis(),
+    setContextData: jest.fn().mockReturnThis(),
+    log: jest.fn(),
+    warn: jest.fn(),
+    error: jest.fn(),
+    debug: jest.fn(),
+  };
+
+  const mockOrder: Order = {
+    id: 1,
+    idempotencyKey: 'idem-123',
+    marketId: 1,
+    side: OrderSide.BUY,
+    type: OrderType.LIMIT,
+    outcome: OrderOutcome.YES,
+    quantity: '100',
+    price: '0.65',
+    status: OrderStatus.PENDING,
+    filledQuantity: '0',
+    averageFillPrice: null,
+    externalOrderId: null,
+    failureReason: null,
+    metadata: null,
+    version: 1,
+    createdAt: new Date(),
+    updatedAt: new Date(),
+    market: {} as Market,
+  };
+
+  const mockMarket: Market = {
+    id: 1,
+    polymarketId: 'market-123',
+    eventId: 1,
+    conditionId: 'condition-456',
+    question: 'Test?',
+    description: null,
+    outcomeYesPrice: '0.65',
+    outcomeNoPrice: '0.35',
+    volume: null,
+    liquidity: null,
+    active: true,
+    closed: false,
+    metadata: null,
+    createdAt: new Date(),
+    updatedAt: new Date(),
+    event: {} as never,
+    tokens: [],
+    orders: [],
+  };
+
+  beforeEach(async () => {
+    queryRunner = {
+      connect: jest.fn(),
+      startTransaction: jest.fn(),
+      commitTransaction: jest.fn(),
+      rollbackTransaction: jest.fn(),
+      release: jest.fn(),
+      manager: {
+        findOne: jest.fn(),
+        create: jest.fn(),
+        save: jest.fn(),
+      },
+    } as unknown as jest.Mocked<QueryRunner>;
+
+    dataSource = {
+      createQueryRunner: jest.fn().mockReturnValue(queryRunner),
+    } as unknown as jest.Mocked<DataSource>;
+
+    const module: TestingModule = await Test.createTestingModule({
+      providers: [
+        OrdersService,
+        {
+          provide: OrderRepository,
+          useValue: {
+            findById: jest.fn(),
+            createQueryBuilder: jest.fn(),
+            paginate: jest.fn(),
+            updateStatus: jest.fn(),
+          },
+        },
+        {
+          provide: getQueueToken('orders'),
+          useValue: {
+            add: jest.fn(),
+          },
+        },
+        {
+          provide: DataSource,
+          useValue: dataSource,
+        },
+        {
+          provide: AppLogger,
+          useValue: mockLogger,
+        },
+      ],
+    }).compile();
+
+    service = module.get<OrdersService>(OrdersService);
+    orderRepository = module.get(OrderRepository);
+    ordersQueue = module.get(getQueueToken('orders'));
+  });
+
+  describe('createOrder', () => {
+    it('should create and queue a new order', async () => {
+      queryRunner.manager.findOne.mockResolvedValueOnce(mockMarket);
+      queryRunner.manager.create.mockReturnValue(mockOrder);
+      queryRunner.manager.save.mockResolvedValue(mockOrder);
+      ordersQueue.add.mockResolvedValue({} as never);
+      orderRepository.updateStatus.mockResolvedValue(undefined);
+
+      const dto = {
+        marketId: 1,
+        side: OrderSide.BUY,
+        type: OrderType.LIMIT,
+        outcome: OrderOutcome.YES,
+        quantity: '100',
+        price: '0.65',
+      };
+
+      const result = await service.createOrder(dto, 'idem-123');
+
+      expect(result.id).toBe(1);
+      expect(queryRunner.commitTransaction).toHaveBeenCalled();
+      expect(ordersQueue.add).toHaveBeenCalledWith('process-order', expect.any(Object), expect.any(Object));
+    });
+
+    it('should throw MarketNotFoundException if market not found', async () => {
+      queryRunner.manager.findOne.mockResolvedValueOnce(null);
+
+      const dto = {
+        marketId: 999,
+        side: OrderSide.BUY,
+        type: OrderType.MARKET,
+        outcome: OrderOutcome.YES,
+        quantity: '50',
+      };
+
+      await expect(service.createOrder(dto, 'idem-456')).rejects.toThrow(MarketNotFoundException);
+      expect(queryRunner.rollbackTransaction).toHaveBeenCalled();
+    });
+
+    it('should throw MarketNotActiveException if market is closed', async () => {
+      const closedMarket = { ...mockMarket, closed: true };
+      queryRunner.manager.findOne.mockResolvedValueOnce(closedMarket);
+
+      const dto = {
+        marketId: 1,
+        side: OrderSide.BUY,
+        type: OrderType.MARKET,
+        outcome: OrderOutcome.YES,
+        quantity: '50',
+      };
+
+      await expect(service.createOrder(dto, 'idem-789')).rejects.toThrow(MarketNotActiveException);
+    });
+  });
+
+  describe('getOrder', () => {
+    it('should return order by id', async () => {
+      orderRepository.findById.mockResolvedValue(mockOrder);
+
+      const result = await service.getOrder(1);
+
+      expect(result.id).toBe(1);
+      expect(result.status).toBe(OrderStatus.PENDING);
+    });
+
+    it('should throw OrderNotFoundException if order not found', async () => {
+      orderRepository.findById.mockResolvedValue(null);
+
+      await expect(service.getOrder(999)).rejects.toThrow(OrderNotFoundException);
+    });
+  });
+
+  describe('getOrders', () => {
+    it('should return paginated orders', async () => {
+      const mockQueryBuilder = {
+        andWhere: jest.fn().mockReturnThis(),
+        orderBy: jest.fn().mockReturnThis(),
+      };
+      orderRepository.createQueryBuilder.mockReturnValue(mockQueryBuilder as never);
+      orderRepository.paginate.mockResolvedValue({
+        data: [mockOrder],
+        meta: { page: 1, size: 20, total: 1, totalPages: 1, hasNext: false, hasPrevious: false },
+      });
+
+      const result = await service.getOrders({ page: 1, pageSize: 20 });
+
+      expect(result.data).toHaveLength(1);
+    });
+
+    it('should filter by status', async () => {
+      const mockQueryBuilder = {
+        andWhere: jest.fn().mockReturnThis(),
+        orderBy: jest.fn().mockReturnThis(),
+      };
+      orderRepository.createQueryBuilder.mockReturnValue(mockQueryBuilder as never);
+      orderRepository.paginate.mockResolvedValue({
+        data: [],
+        meta: { page: 1, size: 20, total: 0, totalPages: 0, hasNext: false, hasPrevious: false },
+      });
+
+      await service.getOrders({ status: OrderStatus.FILLED });
+
+      expect(mockQueryBuilder.andWhere).toHaveBeenCalledWith('order.status = :status', {
+        status: OrderStatus.FILLED,
+      });
+    });
+  });
+
+  describe('cancelOrder', () => {
+    it('should cancel a pending order', async () => {
+      const pendingOrder = { ...mockOrder, status: OrderStatus.PENDING };
+      queryRunner.manager.findOne.mockResolvedValue(pendingOrder);
+      queryRunner.manager.save.mockResolvedValue({ ...pendingOrder, status: OrderStatus.CANCELLED });
+
+      const result = await service.cancelOrder(1);
+
+      expect(result.status).toBe(OrderStatus.CANCELLED);
+      expect(queryRunner.commitTransaction).toHaveBeenCalled();
+    });
+
+    it('should throw OrderNotFoundException if order not found', async () => {
+      queryRunner.manager.findOne.mockResolvedValue(null);
+
+      await expect(service.cancelOrder(999)).rejects.toThrow(OrderNotFoundException);
+    });
+
+    it('should throw OrderNotCancellableException if order is filled', async () => {
+      const filledOrder = { ...mockOrder, status: OrderStatus.FILLED };
+      queryRunner.manager.findOne.mockResolvedValue(filledOrder);
+
+      await expect(service.cancelOrder(1)).rejects.toThrow(OrderNotCancellableException);
+    });
+  });
+});
+
