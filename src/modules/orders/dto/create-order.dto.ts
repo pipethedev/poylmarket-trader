@@ -6,10 +6,14 @@ import {
   IsInt,
   Min,
   ValidateIf,
-  IsIn,
+  IsEnum,
 } from 'class-validator';
 import { Type } from 'class-transformer';
 import { OrderSide, OrderType, OrderOutcome } from '@database/entities/order.entity';
+
+const OrderSideValues = Object.values(OrderSide);
+const OrderTypeValues = Object.values(OrderType);
+const OrderOutcomeValues = Object.values(OrderOutcome);
 
 export class CreateOrderDto {
   @ApiProperty({
@@ -23,26 +27,26 @@ export class CreateOrderDto {
 
   @ApiProperty({
     description: 'Order side - BUY or SELL',
-    enum: ['BUY', 'SELL'],
+    enum: OrderSideValues,
     example: OrderSide.BUY,
   })
-  @IsIn(['BUY', 'SELL'])
+  @IsEnum(OrderSide)
   side: OrderSide;
 
   @ApiProperty({
     description: 'Order type - MARKET or LIMIT',
-    enum: ['MARKET', 'LIMIT'],
+    enum: OrderTypeValues,
     example: OrderType.LIMIT,
   })
-  @IsIn(['MARKET', 'LIMIT'])
+  @IsEnum(OrderType)
   type: OrderType;
 
   @ApiProperty({
     description: 'Outcome to trade - YES or NO',
-    enum: ['YES', 'NO'],
+    enum: OrderOutcomeValues,
     example: OrderOutcome.YES,
   })
-  @IsIn(['YES', 'NO'])
+  @IsEnum(OrderOutcome)
   outcome: OrderOutcome;
 
   @ApiProperty({
@@ -57,6 +61,7 @@ export class CreateOrderDto {
     description: 'Limit price (required for LIMIT orders)',
     example: '0.65000000',
   })
+  @IsOptional()
   @ValidateIf((o: CreateOrderDto) => o.type === OrderType.LIMIT)
   @IsNumberString()
   @IsNotEmpty({ message: 'Price is required for LIMIT orders' })

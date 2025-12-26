@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { InjectQueue } from '@nestjs/bullmq';
-import { Queue, QueueEvents } from 'bullmq';
+import { Queue } from 'bullmq';
 import { EventRepository, MarketRepository, TokenRepository } from '@database/repositories/index';
 import { Event } from '@database/entities/event.entity';
 import { Market } from '@database/entities/market.entity';
@@ -150,33 +150,12 @@ export class EventsService {
 
     this.logger.log(`Sync job queued with ID: ${job.id}`);
 
-    try {
-      const queueEvents = new QueueEvents('sync', {
-        connection: this.syncQueue.opts.connection,
-      });
-
-      const result = await job.waitUntilFinished(queueEvents, 60000);
-
-      await queueEvents.close();
-
-      const syncedEvents = (result?.eventsCreated || 0) + (result?.eventsUpdated || 0);
-      const syncedMarkets = (result?.marketsCreated || 0) + (result?.marketsUpdated || 0);
-
-      return {
-        jobId: job.id!,
-        message: 'Sync completed successfully',
-        syncedEvents,
-        syncedMarkets,
-      };
-    } catch (error) {
-      this.logger.warn(`Failed to wait for job completion: ${(error as Error).message}`);
-      return {
-        jobId: job.id!,
-        message: 'Sync job has been queued and will be processed in the background',
-        syncedEvents: 0,
-        syncedMarkets: 0,
-      };
-    }
+    return {
+      jobId: job.id!,
+      message: 'Sync job has been queued and will be processed in the background',
+      syncedEvents: 0,
+      syncedMarkets: 0,
+    };
   }
 
   private mapToResponse(event: Event): EventResponseDto {

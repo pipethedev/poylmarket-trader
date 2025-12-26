@@ -38,18 +38,13 @@ services:
     restart: unless-stopped
     ports:
       - '3000:3000'
+    env_file:
+      - .env
     environment:
       NODE_ENV: production
-      PORT: 3000
       DATABASE_HOST: postgres
-      DATABASE_PORT: 5432
-      DATABASE_USERNAME: postgres
-      DATABASE_PASSWORD: postgres
-      DATABASE_NAME: polymarket_trader
       REDIS_HOST: redis
-      REDIS_PORT: 6379
-      POLYMARKET_GAMMA_API_URL: https://gamma-api.polymarket.com
-      POLYMARKET_CLOB_API_URL: https://clob.polymarket.com
+      REDIS_URL: redis://redis:6379
     depends_on:
       postgres:
         condition: service_healthy
@@ -67,19 +62,13 @@ services:
     container_name: polymarket_scheduler
     restart: unless-stopped
     command: ['node', 'dist/scheduler.js']
+    env_file:
+      - .env
     environment:
       NODE_ENV: production
       DATABASE_HOST: postgres
-      DATABASE_PORT: 5432
-      DATABASE_USERNAME: postgres
-      DATABASE_PASSWORD: postgres
-      DATABASE_NAME: polymarket_trader
       REDIS_HOST: redis
-      REDIS_PORT: 6379
-      POLYMARKET_GAMMA_API_URL: https://gamma-api.polymarket.com
-      POLYMARKET_CLOB_API_URL: https://clob.polymarket.com
-      SYNC_CRON_EXPRESSION: '*/15 * * * *'
-      PRICE_UPDATE_CRON_EXPRESSION: '*/5 * * * *'
+      REDIS_URL: redis://redis:6379
     depends_on:
       postgres:
         condition: service_healthy
@@ -89,4 +78,3 @@ services:
 volumes:
   postgres_data:
   redis_data:
-
