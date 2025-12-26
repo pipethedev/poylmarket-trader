@@ -120,4 +120,15 @@ export class MarketSummaryDto {
     example: true,
   })
   active: boolean;
+
+  @ApiPropertyOptional({
+    description: 'Tokens for this market',
+    type: Array,
+  })
+  tokens?: Array<{
+    id: number;
+    tokenId: string;
+    outcome: string;
+    price: string;
+  }>;
 }

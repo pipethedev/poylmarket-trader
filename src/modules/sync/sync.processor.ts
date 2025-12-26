@@ -20,7 +20,7 @@ export class SyncProcessor extends WorkerHost {
     this.logger = logger.setPrefix(LogPrefix.QUEUE).setContext(SyncProcessor.name);
   }
 
-  async process(job: Job<SyncJobData>): Promise<void> {
+  async process(job: Job<SyncJobData>): Promise<{ eventsCreated: number; eventsUpdated: number; marketsCreated: number; marketsUpdated: number }> {
     const { limit } = job.data;
     const jobLogger = this.logger.child({ limit, jobId: job.id });
 
@@ -38,6 +38,13 @@ export class SyncProcessor extends WorkerHost {
       if (result.errors.length > 0) {
         jobLogger.warn(`Sync completed with ${result.errors.length} errors`);
       }
+
+      return {
+        eventsCreated: result.eventsCreated,
+        eventsUpdated: result.eventsUpdated,
+        marketsCreated: result.marketsCreated,
+        marketsUpdated: result.marketsUpdated,
+      };
     } catch (error) {
       jobLogger.error(`Sync job failed: ${(error as Error).message}`, (error as Error).stack);
       throw error;

@@ -125,6 +125,20 @@ export class MarketDetailResponseDto extends MarketResponseDto {
     example: 'Bitcoin Price Predictions 2024',
   })
   eventTitle?: string;
+
+  @ApiPropertyOptional({
+    description: 'Event details',
+    type: Object,
+  })
+  event?: {
+    id: number;
+    title: string;
+    slug: string | null;
+    description: string | null;
+    active: boolean;
+    startDate: Date | null;
+    endDate: Date | null;
+  };
 }
 
 export class MarketListResponseDto {

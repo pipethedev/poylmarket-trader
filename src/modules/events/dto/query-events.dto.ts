@@ -42,4 +42,16 @@ export class QueryEventsDto {
   @Min(1)
   @Max(100)
   pageSize?: number = 20;
+
+  @ApiPropertyOptional({
+    description: 'Number of items per page (alias for pageSize)',
+    example: 20,
+    default: 20,
+  })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  @Max(100)
+  limit?: number;
 }

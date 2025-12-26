@@ -1,9 +1,10 @@
 import { Injectable } from '@nestjs/common';
 import { InjectQueue } from '@nestjs/bullmq';
-import { Queue } from 'bullmq';
-import { EventRepository, MarketRepository } from '@database/repositories/index';
+import { Queue, QueueEvents } from 'bullmq';
+import { EventRepository, MarketRepository, TokenRepository } from '@database/repositories/index';
 import { Event } from '@database/entities/event.entity';
 import { Market } from '@database/entities/market.entity';
+import { Token } from '@database/entities/token.entity';
 import { AppLogger, LogPrefix } from '@common/logger/index';
 import { EventNotFoundException } from '@common/exceptions/index';
 import { QueryEventsDto } from './dto/query-events.dto';
@@ -22,6 +23,7 @@ export class EventsService {
   constructor(
     private readonly eventRepository: EventRepository,
     private readonly marketRepository: MarketRepository,
+    private readonly tokenRepository: TokenRepository,
     @InjectQueue('sync')
     private readonly syncQueue: Queue<SyncJobData>,
     logger: AppLogger,
@@ -46,7 +48,7 @@ export class EventsService {
 
     const result = await this.eventRepository.paginate(qb, {
       page: query.page ?? 1,
-      size: query.pageSize ?? 20,
+      size: query.limit ?? query.pageSize ?? 20,
     });
 
     const eventIds = result.data.map((e) => e.id);
@@ -78,11 +80,31 @@ export class EventsService {
       order: { updatedAt: 'DESC' },
     });
 
+    const marketIds = markets.map((m) => m.id);
+    const tokensByMarket = await this.tokenRepository.findByMarketIds(marketIds);
+    const tokensMap = new Map<number, Token[]>();
+    tokensByMarket.forEach((token) => {
+      const existing = tokensMap.get(token.marketId) || [];
+      existing.push(token);
+      tokensMap.set(token.marketId, existing);
+    });
+
     this.logger.log(`Event found with ${markets.length} markets`);
 
     return {
       ...this.mapToResponse(event),
-      markets: markets.map((market) => this.mapMarketToSummary(market)),
+      markets: await Promise.all(
+        markets.map((market) => {
+          const summary = this.mapMarketToSummary(market);
+          summary.tokens = (tokensMap.get(market.id) || []).map((token) => ({
+            id: token.id,
+            tokenId: token.tokenId,
+            outcome: token.outcome,
+            price: token.price,
+          }));
+          return summary;
+        }),
+      ),
     };
   }
 
@@ -106,7 +128,7 @@ export class EventsService {
     return markets.map((market) => this.mapMarketToSummary(market));
   }
 
-  async syncEvents(limit = 100): Promise<{ jobId: string; message: string }> {
+  async syncEvents(limit = 100): Promise<{ jobId: string; message: string; syncedEvents: number; syncedMarkets: number }> {
     this.logger.log(`Queuing sync job with limit: ${limit}`);
 
     const job = await this.syncQueue.add(
@@ -128,10 +150,33 @@ export class EventsService {
 
     this.logger.log(`Sync job queued with ID: ${job.id}`);
 
-    return {
-      jobId: job.id!,
-      message: 'Sync job has been queued and will be processed in the background',
-    };
+    try {
+      const queueEvents = new QueueEvents('sync', {
+        connection: this.syncQueue.opts.connection,
+      });
+
+      const result = await job.waitUntilFinished(queueEvents, 60000);
+
+      await queueEvents.close();
+
+      const syncedEvents = (result?.eventsCreated || 0) + (result?.eventsUpdated || 0);
+      const syncedMarkets = (result?.marketsCreated || 0) + (result?.marketsUpdated || 0);
+
+      return {
+        jobId: job.id!,
+        message: 'Sync completed successfully',
+        syncedEvents,
+        syncedMarkets,
+      };
+    } catch (error) {
+      this.logger.warn(`Failed to wait for job completion: ${(error as Error).message}`);
+      return {
+        jobId: job.id!,
+        message: 'Sync job has been queued and will be processed in the background',
+        syncedEvents: 0,
+        syncedMarkets: 0,
+      };
+    }
   }
 
   private mapToResponse(event: Event): EventResponseDto {

@@ -7,9 +7,14 @@ import {
   IsInt,
   Min,
   ValidateIf,
+  IsIn,
 } from 'class-validator';
 import { Type } from 'class-transformer';
-import { OrderSide, OrderType, OrderOutcome } from '../../../database/entities/order.entity';
+import { OrderSide, OrderType, OrderOutcome } from '@database/entities/order.entity';
+
+const OrderSideValues = Object.values(OrderSide);
+const OrderTypeValues = Object.values(OrderType);
+const OrderOutcomeValues = Object.values(OrderOutcome);
 
 export class CreateOrderDto {
   @ApiProperty({
@@ -26,7 +31,7 @@ export class CreateOrderDto {
     enum: ['BUY', 'SELL'],
     example: 'BUY',
   })
-  @IsEnum(OrderSide)
+  @IsIn(OrderSideValues)
   side: OrderSide;
 
   @ApiProperty({
@@ -34,7 +39,7 @@ export class CreateOrderDto {
     enum: ['MARKET', 'LIMIT'],
     example: 'LIMIT',
   })
-  @IsEnum(OrderType)
+  @IsIn(OrderTypeValues)
   type: OrderType;
 
   @ApiProperty({
@@ -42,7 +47,7 @@ export class CreateOrderDto {
     enum: ['YES', 'NO'],
     example: 'YES',
   })
-  @IsEnum(OrderOutcome)
+  @IsIn(OrderOutcomeValues)
   outcome: OrderOutcome;
 
   @ApiProperty({

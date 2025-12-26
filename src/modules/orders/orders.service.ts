@@ -115,7 +115,7 @@ export class OrdersService {
 
     const result = await this.orderRepository.paginate(qb, {
       page: query.page ?? 1,
-      size: query.pageSize ?? 20,
+      size: query.limit ?? query.pageSize ?? 20,
     });
 
     this.logger.log(`Found ${result.meta.total} orders`);

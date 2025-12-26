@@ -2,7 +2,7 @@ FROM node:20
 
 WORKDIR /usr/src/app
 
-RUN corepack enable && corepack prepare pnpm --activate
+RUN corepack enable && corepack prepare pnpm@9.15.0 --activate
 
 COPY package.json pnpm-lock.yaml ./
 

@@ -1,7 +1,7 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
 import { IsOptional, IsEnum, IsInt, Min, Max } from 'class-validator';
-import { Type } from 'class-transformer';
-import { OrderStatus, OrderSide, OrderOutcome } from '../../../database/entities/order.entity';
+import { Transform, Type } from 'class-transformer';
+import { OrderStatus, OrderSide, OrderOutcome } from '@database/entities/order.entity';
 
 export class QueryOrdersDto {
   @ApiPropertyOptional({
@@ -63,4 +63,16 @@ export class QueryOrdersDto {
   @Min(1)
   @Max(100)
   pageSize?: number = 20;
+
+  @ApiPropertyOptional({
+    description: 'Number of items per page (alias for pageSize)',
+    example: 20,
+    default: 20,
+  })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  @Max(100)
+  limit?: number;
 }

@@ -48,13 +48,28 @@ export class MarketsService {
 
     const result = await this.marketRepository.paginate(qb, {
       page: query.page ?? 1,
-      size: query.pageSize ?? 20,
+      size: query.limit ?? query.pageSize ?? 20,
     });
 
     this.logger.log(`Found ${result.meta.total} markets`);
 
+    const marketIds = result.data.map((m) => m.id);
+
+    const tokensByMarket = await this.tokenRepository.findByMarketIds(marketIds);
+
+    const tokensMap = new Map<number, Token[]>();
+    
+    tokensByMarket.forEach((token) => {
+      const existing = tokensMap.get(token.marketId) || [];
+      existing.push(token);
+      tokensMap.set(token.marketId, existing);
+    });
+
     return {
-      data: result.data.map((market) => this.mapToResponse(market)),
+      data: result.data.map((market) => ({
+        ...this.mapToResponse(market),
+        tokens: (tokensMap.get(market.id) || []).map((token) => this.mapTokenToResponse(token)),
+      })),
       meta: result.meta,
     };
   }
@@ -76,11 +91,25 @@ export class MarketsService {
 
     this.logger.log(`Market found with ${tokens.length} tokens`);
 
-    return {
+    const response: MarketDetailResponseDto = {
       ...this.mapToResponse(market),
       tokens: tokens.map((token) => this.mapTokenToResponse(token)),
       eventTitle: event?.title,
     };
+
+    if (event) {
+      response.event = {
+        id: event.id,
+        title: event.title,
+        slug: event.slug,
+        description: event.description,
+        active: event.active,
+        startDate: event.startDate,
+        endDate: event.endDate,
+      };
+    }
+
+    return response;
   }
 
   async getMarketByExternalId(

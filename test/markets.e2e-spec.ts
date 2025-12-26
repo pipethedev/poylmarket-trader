@@ -264,8 +264,8 @@ describe('Markets API (e2e)', () => {
         .get(`/markets/${market.id}`)
         .expect(200);
 
-      expect(response.body.outcomeYesPrice).toBe('0.65');
-      expect(response.body.outcomeNoPrice).toBe('0.35');
+      expect(response.body.outcomeYesPrice).toBe('0.65000000');
+      expect(response.body.outcomeNoPrice).toBe('0.35000000');
     });
   });
 });

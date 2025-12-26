@@ -21,6 +21,13 @@ export class TokenRepository extends BaseRepository<Token> {
     return this.findManyBy({ marketId });
   }
 
+  async findByMarketIds(marketIds: number[]): Promise<Token[]> {
+    if (marketIds.length === 0) return [];
+    return this.createQueryBuilder('token')
+      .where('token.market_id IN (:...marketIds)', { marketIds })
+      .getMany();
+  }
+
   async findByMarketIdAndOutcome(marketId: number, outcome: TokenOutcome): Promise<Token | null> {
     return this.findOneBy({ marketId, outcome });
   }
