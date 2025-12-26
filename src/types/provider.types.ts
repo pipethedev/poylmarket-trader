@@ -87,7 +87,7 @@ export type MarketProvider = {
   getEvents(params?: EventQueryParams): Promise<ProviderEvent[]>;
   getMarkets(eventId: string, params?: MarketQueryParams): Promise<ProviderMarket[]>;
   getAllMarkets(params?: MarketQueryParams): Promise<ProviderMarket[]>;
-  getMarketPrice(marketId: string): Promise<MarketPrice>;
+  getMarketPrice(marketId: string): Promise<MarketPrice | null>;
   placeOrder?(order: OrderRequest): Promise<OrderResult>;
   cancelOrder?(orderId: string): Promise<CancelResult>;
   getOrderStatus?(orderId: string): Promise<OrderStatus>;

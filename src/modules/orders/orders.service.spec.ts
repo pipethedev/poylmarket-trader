@@ -178,6 +178,21 @@ describe('OrdersService', () => {
 
       await expect(service.createOrder(dto, 'idem-789')).rejects.toThrow(MarketNotActiveException);
     });
+
+    it('should throw MarketNotActiveException if market is inactive', async () => {
+      const inactiveMarket = { ...mockMarket, active: false };
+      queryRunner.manager.findOne.mockResolvedValueOnce(inactiveMarket);
+
+      const dto = {
+        marketId: 1,
+        side: OrderSide.BUY,
+        type: OrderType.MARKET,
+        outcome: OrderOutcome.YES,
+        quantity: '50',
+      };
+
+      await expect(service.createOrder(dto, 'idem-abc')).rejects.toThrow(MarketNotActiveException);
+    });
   });
 
   describe('getOrder', () => {
@@ -231,6 +246,60 @@ describe('OrdersService', () => {
         status: OrderStatus.FILLED,
       });
     });
+
+    it('should filter by marketId', async () => {
+      const mockQueryBuilder = {
+        andWhere: jest.fn().mockReturnThis(),
+        orderBy: jest.fn().mockReturnThis(),
+      };
+      orderRepository.createQueryBuilder.mockReturnValue(mockQueryBuilder as never);
+      orderRepository.paginate.mockResolvedValue({
+        data: [],
+        meta: { page: 1, size: 20, total: 0, totalPages: 0, hasNext: false, hasPrevious: false },
+      });
+
+      await service.getOrders({ marketId: 1 });
+
+      expect(mockQueryBuilder.andWhere).toHaveBeenCalledWith('order.market_id = :marketId', {
+        marketId: 1,
+      });
+    });
+
+    it('should filter by side', async () => {
+      const mockQueryBuilder = {
+        andWhere: jest.fn().mockReturnThis(),
+        orderBy: jest.fn().mockReturnThis(),
+      };
+      orderRepository.createQueryBuilder.mockReturnValue(mockQueryBuilder as never);
+      orderRepository.paginate.mockResolvedValue({
+        data: [],
+        meta: { page: 1, size: 20, total: 0, totalPages: 0, hasNext: false, hasPrevious: false },
+      });
+
+      await service.getOrders({ side: OrderSide.BUY });
+
+      expect(mockQueryBuilder.andWhere).toHaveBeenCalledWith('order.side = :side', {
+        side: OrderSide.BUY,
+      });
+    });
+
+    it('should filter by outcome', async () => {
+      const mockQueryBuilder = {
+        andWhere: jest.fn().mockReturnThis(),
+        orderBy: jest.fn().mockReturnThis(),
+      };
+      orderRepository.createQueryBuilder.mockReturnValue(mockQueryBuilder as never);
+      orderRepository.paginate.mockResolvedValue({
+        data: [],
+        meta: { page: 1, size: 20, total: 0, totalPages: 0, hasNext: false, hasPrevious: false },
+      });
+
+      await service.getOrders({ outcome: OrderOutcome.YES });
+
+      expect(mockQueryBuilder.andWhere).toHaveBeenCalledWith('order.outcome = :outcome', {
+        outcome: OrderOutcome.YES,
+      });
+    });
   });
 
   describe('cancelOrder', () => {
@@ -256,6 +325,85 @@ describe('OrdersService', () => {
       queryRunner.manager.findOne.mockResolvedValue(filledOrder);
 
       await expect(service.cancelOrder(1)).rejects.toThrow(OrderNotCancellableException);
+    });
+  });
+
+  describe('updateOrderStatus', () => {
+    it('should update order status successfully', async () => {
+      const order = { ...mockOrder, version: 1 };
+      const updatedOrder = { ...order, status: OrderStatus.FILLED, version: 2 };
+      queryRunner.manager.findOne.mockResolvedValue(order);
+      queryRunner.manager.save.mockResolvedValue(updatedOrder);
+
+      const result = await service.updateOrderStatus(1, OrderStatus.FILLED);
+
+      expect(result.status).toBe(OrderStatus.FILLED);
+      expect(result.version).toBe(2);
+      expect(queryRunner.commitTransaction).toHaveBeenCalled();
+    });
+
+    it('should update order with additional fields', async () => {
+      const order = { ...mockOrder, version: 1 };
+      const updatedOrder = {
+        ...order,
+        status: OrderStatus.FILLED,
+        filledQuantity: '100',
+        averageFillPrice: '0.65',
+        externalOrderId: 'ext-123',
+        version: 2,
+      };
+      queryRunner.manager.findOne.mockResolvedValue(order);
+      queryRunner.manager.save.mockResolvedValue(updatedOrder);
+
+      const result = await service.updateOrderStatus(1, OrderStatus.FILLED, {
+        filledQuantity: '100',
+        averageFillPrice: '0.65',
+        externalOrderId: 'ext-123',
+      });
+
+      expect(result.filledQuantity).toBe('100');
+      expect(result.averageFillPrice).toBe('0.65');
+      expect(result.externalOrderId).toBe('ext-123');
+    });
+
+    it('should update order with failure reason', async () => {
+      const order = { ...mockOrder, version: 1 };
+      const updatedOrder = {
+        ...order,
+        status: OrderStatus.FAILED,
+        failureReason: 'Insufficient balance',
+        version: 2,
+      };
+      queryRunner.manager.findOne.mockResolvedValue(order);
+      queryRunner.manager.save.mockResolvedValue(updatedOrder);
+
+      const result = await service.updateOrderStatus(1, OrderStatus.FAILED, {
+        failureReason: 'Insufficient balance',
+      });
+
+      expect(result.status).toBe(OrderStatus.FAILED);
+      expect(result.failureReason).toBe('Insufficient balance');
+    });
+
+    it('should throw OrderNotFoundException if order not found', async () => {
+      queryRunner.manager.findOne.mockResolvedValue(null);
+
+      await expect(service.updateOrderStatus(999, OrderStatus.FILLED)).rejects.toThrow(
+        OrderNotFoundException,
+      );
+      expect(queryRunner.rollbackTransaction).toHaveBeenCalled();
+    });
+
+    it('should throw OptimisticLockException on version mismatch', async () => {
+      const order = { ...mockOrder, version: 1 };
+      const updatedOrder = { ...order, status: OrderStatus.FILLED, version: 1 };
+      queryRunner.manager.findOne.mockResolvedValue(order);
+      queryRunner.manager.save.mockResolvedValue(updatedOrder);
+
+      await expect(service.updateOrderStatus(1, OrderStatus.FILLED)).rejects.toThrow(
+        'Order 1 was modified by another process',
+      );
+      expect(queryRunner.rollbackTransaction).toHaveBeenCalled();
     });
   });
 });

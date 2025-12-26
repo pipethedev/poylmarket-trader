@@ -85,7 +85,7 @@ export class PolymarketProvider implements MarketProvider {
     }
   }
 
-  async getMarketPrice(conditionId: string): Promise<MarketPrice> {
+  async getMarketPrice(conditionId: string): Promise<MarketPrice | null> {
     try {
       this.logger.setContextData({ conditionId }).debug('Fetching market price from CLOB API');
 
@@ -101,6 +101,10 @@ export class PolymarketProvider implements MarketProvider {
         timestamp: new Date(),
       };
     } catch (error) {
+      if (error instanceof Error && error.message.includes('404')) {
+        this.logger.debug('Market not found on CLOB API, skipping price update');
+        return null;
+      }
       throw this.handleError(error, 'getMarketPrice');
     }
   }

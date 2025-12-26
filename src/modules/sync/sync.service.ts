@@ -238,6 +238,10 @@ export class SyncService {
           const marketId = market.conditionId || market.polymarketId;
           const price = await this.marketProvider.getMarketPrice(marketId);
 
+          if (!price) {
+            continue;
+          }
+
           await Promise.all([
             this.marketRepository.update(market.id, {
               outcomeYesPrice: price.yesPrice,

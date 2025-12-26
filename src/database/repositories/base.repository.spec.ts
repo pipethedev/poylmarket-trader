@@ -85,6 +85,28 @@ describe('BaseRepository', () => {
     });
   });
 
+  describe('findOneBy', () => {
+    it('should find one entity by where clause', async () => {
+      const entity = { id: 1, name: 'Test' };
+      repository.findOneBy.mockResolvedValue(entity);
+
+      const result = await baseRepository.findOneBy({ name: 'Test' });
+
+      expect(result).toEqual(entity);
+    });
+  });
+
+  describe('findManyBy', () => {
+    it('should find many entities by where clause', async () => {
+      const entities = [{ id: 1, name: 'Test' }];
+      repository.findBy.mockResolvedValue(entities);
+
+      const result = await baseRepository.findManyBy({ name: 'Test' });
+
+      expect(result).toEqual(entities);
+    });
+  });
+
   describe('findMany', () => {
     it('should find many entities', async () => {
       const entities = [
@@ -164,6 +186,30 @@ describe('BaseRepository', () => {
     });
   });
 
+  describe('saveMany', () => {
+    it('should save multiple entities', async () => {
+      const entities = [
+        { id: 1, name: 'Test1' },
+        { id: 2, name: 'Test2' },
+      ];
+      repository.save.mockResolvedValue(entities);
+
+      const result = await baseRepository.saveMany(entities);
+
+      expect(result).toEqual(entities);
+    });
+  });
+
+  describe('updateBy', () => {
+    it('should update entities by where clause', async () => {
+      repository.update.mockResolvedValue({ affected: 2 } as never);
+
+      await baseRepository.updateBy({ name: 'OldName' }, { name: 'NewName' });
+
+      expect(repository.update).toHaveBeenCalledWith({ name: 'OldName' }, { name: 'NewName' });
+    });
+  });
+
   describe('delete', () => {
     it('should delete entity and return true', async () => {
       repository.delete.mockResolvedValue({ affected: 1, raw: {} });
@@ -179,6 +225,40 @@ describe('BaseRepository', () => {
       const result = await baseRepository.delete(999);
 
       expect(result).toBe(false);
+    });
+
+    it('should handle undefined affected', async () => {
+      repository.delete.mockResolvedValue({ affected: undefined, raw: {} });
+
+      const result = await baseRepository.delete(1);
+
+      expect(result).toBe(false);
+    });
+  });
+
+  describe('deleteBy', () => {
+    it('should delete entities by where clause and return count', async () => {
+      repository.delete.mockResolvedValue({ affected: 3, raw: {} });
+
+      const result = await baseRepository.deleteBy({ name: 'ToDelete' });
+
+      expect(result).toBe(3);
+    });
+
+    it('should return 0 if nothing deleted', async () => {
+      repository.delete.mockResolvedValue({ affected: 0, raw: {} });
+
+      const result = await baseRepository.deleteBy({ name: 'NonExistent' });
+
+      expect(result).toBe(0);
+    });
+
+    it('should handle undefined affected', async () => {
+      repository.delete.mockResolvedValue({ affected: undefined, raw: {} });
+
+      const result = await baseRepository.deleteBy({ name: 'Test' });
+
+      expect(result).toBe(0);
     });
   });
 

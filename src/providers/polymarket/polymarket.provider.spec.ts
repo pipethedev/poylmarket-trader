@@ -146,6 +146,14 @@ describe('PolymarketProvider', () => {
 
       expect(result).toHaveLength(0);
     });
+
+    it('should handle errors when fetching markets', async () => {
+      const axiosError = new AxiosError('Server error');
+      axiosError.response = { status: 500, data: { message: 'Internal error' } } as AxiosResponse;
+      httpService.gammaGet.mockRejectedValue(axiosError);
+
+      await expect(provider.getMarkets('event-123')).rejects.toThrow(ProviderException);
+    });
   });
 
   describe('getAllMarkets', () => {
@@ -182,6 +190,27 @@ describe('PolymarketProvider', () => {
       expect(result).toHaveLength(1);
       expect(result[0].id).toBe('c1');
     });
+
+    it('should limit results', async () => {
+      const markets = [
+        { condition_id: 'c1', active: true, closed: false, tokens: [] },
+        { condition_id: 'c2', active: true, closed: false, tokens: [] },
+        { condition_id: 'c3', active: true, closed: false, tokens: [] },
+      ];
+      clobService.getMarkets.mockResolvedValue({ data: markets });
+
+      const result = await provider.getAllMarkets({ limit: 2 });
+
+      expect(result).toHaveLength(2);
+    });
+
+    it('should handle errors from CLOB API', async () => {
+      const axiosError = new AxiosError('Network error');
+      axiosError.code = 'ETIMEDOUT';
+      clobService.getMarkets.mockRejectedValue(axiosError);
+
+      await expect(provider.getAllMarkets()).rejects.toThrow(ProviderUnavailableException);
+    });
   });
 
   describe('getMarketPrice', () => {
@@ -201,6 +230,24 @@ describe('PolymarketProvider', () => {
       expect(result.yesPrice).toBe('0.7');
       expect(result.noPrice).toBe('0.3');
     });
+
+    it('should return null for 404 errors', async () => {
+      const axiosError = new AxiosError('Not found');
+      axiosError.message = '404 Not found';
+      clobService.getMarket.mockRejectedValue(axiosError);
+
+      const result = await provider.getMarketPrice('non-existent');
+
+      expect(result).toBeNull();
+    });
+
+    it('should throw for non-404 errors', async () => {
+      const axiosError = new AxiosError('Server error');
+      axiosError.response = { status: 500, data: {} } as AxiosResponse;
+      clobService.getMarket.mockRejectedValue(axiosError);
+
+      await expect(provider.getMarketPrice('cond-123')).rejects.toThrow(ProviderException);
+    });
   });
 
   describe('healthCheck', () => {
@@ -218,6 +265,54 @@ describe('PolymarketProvider', () => {
       const result = await provider.healthCheck();
 
       expect(result).toBe(false);
+    });
+  });
+
+  describe('parsing methods', () => {
+    it('should handle invalid outcome prices JSON', async () => {
+      const invalidMarket = {
+        ...mockGammaMarket,
+        outcomePrices: 'invalid json',
+      };
+
+      httpService.gammaGet.mockResolvedValue({
+        data: { ...mockGammaEvent, markets: [invalidMarket] },
+      } as AxiosResponse);
+
+      const result = await provider.getMarkets('event-123');
+
+      expect(result[0].outcomeYesPrice).toBe('0');
+      expect(result[0].outcomeNoPrice).toBe('0');
+    });
+
+    it('should handle invalid token IDs JSON', async () => {
+      const invalidMarket = {
+        ...mockGammaMarket,
+        clobTokenIds: 'invalid json',
+      };
+
+      httpService.gammaGet.mockResolvedValue({
+        data: { ...mockGammaEvent, markets: [invalidMarket] },
+      } as AxiosResponse);
+
+      const result = await provider.getMarkets('event-123');
+
+      expect(result[0].tokens).toHaveLength(0);
+    });
+  });
+
+  describe('error handling', () => {
+    it('should handle generic errors', async () => {
+      httpService.gammaGet.mockRejectedValue(new Error('Generic error'));
+
+      await expect(provider.getEvents()).rejects.toThrow(ProviderException);
+    });
+
+    it('should pass through ProviderException', async () => {
+      const providerError = new ProviderException('polymarket', 'Custom error');
+      httpService.gammaGet.mockRejectedValue(providerError);
+
+      await expect(provider.getEvents()).rejects.toThrow(ProviderException);
     });
   });
 });

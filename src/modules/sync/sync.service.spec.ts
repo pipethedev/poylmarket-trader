@@ -160,6 +160,28 @@ describe('SyncService', () => {
 
       expect(result.errors).toContain('Sync failed: API Error');
     });
+
+    it('should handle individual event sync errors', async () => {
+      marketProvider.getEvents.mockResolvedValue([mockProviderEvent]);
+      queryRunner.manager.findOne.mockRejectedValue(new Error('DB Error'));
+
+      const result = await service.syncEvents(100);
+
+      expect(result.errors.length).toBeGreaterThan(0);
+      expect(result.errors[0]).toContain('Failed to sync event');
+    });
+
+    it('should continue syncing after market sync errors', async () => {
+      const event2 = { ...mockProviderEvent, id: 'poly-event-456' };
+      marketProvider.getEvents.mockResolvedValue([mockProviderEvent, event2]);
+      marketProvider.getMarkets.mockRejectedValue(new Error('Market fetch failed'));
+      queryRunner.manager.findOne.mockResolvedValue(null);
+
+      const result = await service.syncEvents(100);
+
+      expect(result.eventsCreated).toBe(2);
+      expect(result.errors.length).toBeGreaterThan(0);
+    });
   });
 
   describe('syncEvent', () => {
@@ -184,6 +206,14 @@ describe('SyncService', () => {
       expect(result.created).toBe(false);
       expect(result.event.id).toBe(1);
     });
+
+    it('should rollback on error', async () => {
+      queryRunner.manager.findOne.mockResolvedValue(null);
+      queryRunner.manager.save.mockRejectedValue(new Error('Save failed'));
+
+      await expect(service.syncEvent(mockProviderEvent)).rejects.toThrow('Save failed');
+      expect(queryRunner.rollbackTransaction).toHaveBeenCalled();
+    });
   });
 
   describe('syncMarket', () => {
@@ -204,14 +234,22 @@ describe('SyncService', () => {
       existingToken.id = 1;
 
       queryRunner.manager.findOne
-        .mockResolvedValueOnce(existingMarket) // Market lookup
-        .mockResolvedValueOnce(existingToken) // First token lookup
-        .mockResolvedValueOnce(existingToken); // Second token lookup
+        .mockResolvedValueOnce(existingMarket)
+        .mockResolvedValueOnce(existingToken)
+        .mockResolvedValueOnce(existingToken);
 
       const result = await service.syncMarket(mockProviderMarket, 1);
 
       expect(result.created).toBe(false);
       expect(result.tokensUpdated).toBe(2);
+    });
+
+    it('should rollback on market sync error', async () => {
+      queryRunner.manager.findOne.mockResolvedValue(null);
+      queryRunner.manager.save.mockRejectedValue(new Error('Save failed'));
+
+      await expect(service.syncMarket(mockProviderMarket, 1)).rejects.toThrow('Save failed');
+      expect(queryRunner.rollbackTransaction).toHaveBeenCalled();
     });
   });
 
@@ -241,6 +279,18 @@ describe('SyncService', () => {
       expect(tokenRepository.updatePriceByMarketIdAndOutcome).toHaveBeenCalledTimes(2);
     });
 
+    it('should skip markets not found on provider', async () => {
+      const activeMarket = { id: 1, conditionId: 'c1', polymarketId: 'm1' } as Market;
+      marketRepository.findActiveMarketsWithPriceInfo.mockResolvedValue([activeMarket]);
+      marketProvider.getMarketPrice.mockResolvedValue(null);
+
+      const result = await service.updateMarketPrices();
+
+      expect(result.updated).toBe(0);
+      expect(result.errors).toHaveLength(0);
+      expect(marketRepository.update).not.toHaveBeenCalled();
+    });
+
     it('should handle price update errors', async () => {
       const activeMarket = { id: 1, conditionId: 'c1', polymarketId: 'm1' } as Market;
       marketRepository.findActiveMarketsWithPriceInfo.mockResolvedValue([activeMarket]);
@@ -250,6 +300,38 @@ describe('SyncService', () => {
 
       expect(result.errors).toHaveLength(1);
       expect(result.updated).toBe(0);
+    });
+
+    it('should handle errors when fetching active markets', async () => {
+      marketRepository.findActiveMarketsWithPriceInfo.mockRejectedValue(
+        new Error('DB connection failed'),
+      );
+
+      const result = await service.updateMarketPrices();
+
+      expect(result.errors).toContain('Price update failed: DB connection failed');
+      expect(result.updated).toBe(0);
+    });
+  });
+
+  describe('syncMarketsForEvent', () => {
+    it('should handle individual market sync errors', async () => {
+      marketProvider.getMarkets.mockResolvedValue([mockProviderMarket]);
+      queryRunner.manager.findOne.mockRejectedValue(new Error('DB Error'));
+
+      const result = await service.syncMarketsForEvent('poly-event-123', 1);
+
+      expect(result.errors.length).toBeGreaterThan(0);
+      expect(result.errors[0]).toContain('Failed to sync market');
+    });
+
+    it('should handle getMarkets errors', async () => {
+      marketProvider.getMarkets.mockRejectedValue(new Error('API Error'));
+
+      const result = await service.syncMarketsForEvent('poly-event-123', 1);
+
+      expect(result.errors.length).toBeGreaterThan(0);
+      expect(result.errors[0]).toContain('Failed to fetch markets');
     });
   });
 });
