@@ -83,11 +83,11 @@ export class EventsService {
     const marketIds = markets.map((m) => m.id);
     const tokensByMarket = await this.tokenRepository.findByMarketIds(marketIds);
     const tokensMap = new Map<number, Token[]>();
-    tokensByMarket.forEach((token) => {
+    for (const token of tokensByMarket) {
       const existing = tokensMap.get(token.marketId) || [];
       existing.push(token);
       tokensMap.set(token.marketId, existing);
-    });
+    }
 
     this.logger.log(`Event found with ${markets.length} markets`);
 

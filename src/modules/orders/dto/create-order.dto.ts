@@ -1,6 +1,5 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import {
-  IsEnum,
   IsNotEmpty,
   IsOptional,
   IsNumberString,
@@ -12,9 +11,9 @@ import {
 import { Type } from 'class-transformer';
 import { OrderSide, OrderType, OrderOutcome } from '@database/entities/order.entity';
 
-const OrderSideValues = Object.values(OrderSide);
-const OrderTypeValues = Object.values(OrderType);
-const OrderOutcomeValues = Object.values(OrderOutcome);
+const OrderSideValues = [...Object.values(OrderSide)];
+const OrderTypeValues = [...Object.values(OrderType)];
+const OrderOutcomeValues = [...Object.values(OrderOutcome)];
 
 export class CreateOrderDto {
   @ApiProperty({
@@ -28,26 +27,26 @@ export class CreateOrderDto {
 
   @ApiProperty({
     description: 'Order side - BUY or SELL',
-    enum: ['BUY', 'SELL'],
-    example: 'BUY',
+    enum: OrderSideValues,
+    example: OrderSide.BUY,
   })
-  @IsIn(OrderSideValues)
+  @IsIn(OrderSideValues, { message: `side must be one of: ${OrderSideValues.join(', ')}` })
   side: OrderSide;
 
   @ApiProperty({
     description: 'Order type - MARKET or LIMIT',
-    enum: ['MARKET', 'LIMIT'],
-    example: 'LIMIT',
+    enum: OrderTypeValues,
+    example: OrderType.LIMIT,
   })
-  @IsIn(OrderTypeValues)
+  @IsIn(OrderTypeValues, { message: `type must be one of: ${OrderTypeValues.join(', ')}` })
   type: OrderType;
 
   @ApiProperty({
     description: 'Outcome to trade - YES or NO',
-    enum: ['YES', 'NO'],
-    example: 'YES',
+    enum: OrderOutcomeValues,
+    example: OrderOutcome.YES,
   })
-  @IsIn(OrderOutcomeValues)
+  @IsIn(OrderOutcomeValues, { message: `outcome must be one of: ${OrderOutcomeValues.join(', ')}` })
   outcome: OrderOutcome;
 
   @ApiProperty({

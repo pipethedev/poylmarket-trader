@@ -1,11 +1,16 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { PaginationMetaDto } from '../../../common/pagination';
+import { PaginationMetaDto } from '@common/pagination';
 import {
   OrderSide,
   OrderType,
   OrderOutcome,
   OrderStatus,
-} from '../../../database/entities/order.entity';
+} from '@database/entities/order.entity';
+
+const OrderSideValues = [...Object.values(OrderSide)];
+const OrderTypeValues = [...Object.values(OrderType)];
+const OrderOutcomeValues = [...Object.values(OrderOutcome)];
+const OrderStatusValues = [...Object.values(OrderStatus)];
 
 export class OrderResponseDto {
   @ApiProperty({
@@ -28,22 +33,22 @@ export class OrderResponseDto {
 
   @ApiProperty({
     description: 'Order side',
-    enum: ['BUY', 'SELL'],
-    example: 'BUY',
+    enum: OrderSideValues,
+    example: OrderSide.BUY,
   })
   side: OrderSide;
 
   @ApiProperty({
     description: 'Order type',
-    enum: ['MARKET', 'LIMIT'],
-    example: 'LIMIT',
+    enum: OrderTypeValues,
+    example: OrderType.LIMIT,
   })
   type: OrderType;
 
   @ApiProperty({
     description: 'Outcome being traded',
-    enum: ['YES', 'NO'],
-    example: 'YES',
+    enum: OrderOutcomeValues,
+    example: OrderOutcome.YES,
   })
   outcome: OrderOutcome;
 
@@ -61,8 +66,8 @@ export class OrderResponseDto {
 
   @ApiProperty({
     description: 'Current order status',
-    enum: ['PENDING', 'QUEUED', 'PROCESSING', 'FILLED', 'PARTIALLY_FILLED', 'CANCELLED', 'FAILED'],
-    example: 'PENDING',
+    enum: OrderStatusValues,
+    example: OrderStatus.PENDING,
   })
   status: OrderStatus;
 

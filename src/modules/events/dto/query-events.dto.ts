@@ -37,10 +37,14 @@ export class QueryEventsDto {
     default: 20,
   })
   @IsOptional()
+  @Transform(({ value }) => {
+    const num = Number(value);
+    if (isNaN(num) || num < 1) return 20;
+    return Math.min(num, 100); // Cap at 100 instead of rejecting
+  })
   @Type(() => Number)
   @IsInt()
   @Min(1)
-  @Max(100)
   pageSize?: number = 20;
 
   @ApiPropertyOptional({
@@ -49,9 +53,13 @@ export class QueryEventsDto {
     default: 20,
   })
   @IsOptional()
+  @Transform(({ value }) => {
+    const num = Number(value);
+    if (isNaN(num) || num < 1) return 20;
+    return Math.min(num, 100);
+  })
   @Type(() => Number)
   @IsInt()
   @Min(1)
-  @Max(100)
   limit?: number;
 }

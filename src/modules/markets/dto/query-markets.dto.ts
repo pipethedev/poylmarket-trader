@@ -1,5 +1,5 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
-import { IsOptional, IsBoolean, IsInt, Min, Max, IsString } from 'class-validator';
+import { IsOptional, IsBoolean, IsInt, Min, IsString } from 'class-validator';
 import { Type, Transform } from 'class-transformer';
 
 export class QueryMarketsDto {
@@ -47,10 +47,14 @@ export class QueryMarketsDto {
     default: 20,
   })
   @IsOptional()
+  @Transform(({ value }) => {
+    const num = Number(value);
+    if (isNaN(num) || num < 1) return 20;
+    return Math.min(num, 100);
+  })
   @Type(() => Number)
   @IsInt()
   @Min(1)
-  @Max(100)
   pageSize?: number = 20;
 
   @ApiPropertyOptional({
@@ -59,9 +63,13 @@ export class QueryMarketsDto {
     default: 20,
   })
   @IsOptional()
+  @Transform(({ value }) => {
+    const num = Number(value);
+    if (isNaN(num) || num < 1) return 20;
+    return Math.min(num, 100);
+  })
   @Type(() => Number)
   @IsInt()
   @Min(1)
-  @Max(100)
   limit?: number;
 }

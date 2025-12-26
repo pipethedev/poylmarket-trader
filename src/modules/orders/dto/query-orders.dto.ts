@@ -1,7 +1,11 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
-import { IsOptional, IsEnum, IsInt, Min, Max } from 'class-validator';
+import { IsOptional, IsEnum, IsInt, Min } from 'class-validator';
 import { Transform, Type } from 'class-transformer';
 import { OrderStatus, OrderSide, OrderOutcome } from '@database/entities/order.entity';
+
+const OrderStatusValues = Object.values(OrderStatus);
+const OrderSideValues = Object.values(OrderSide);
+const OrderOutcomeValues = Object.values(OrderOutcome);
 
 export class QueryOrdersDto {
   @ApiPropertyOptional({
@@ -16,8 +20,8 @@ export class QueryOrdersDto {
 
   @ApiPropertyOptional({
     description: 'Filter by order status',
-    enum: ['PENDING', 'QUEUED', 'PROCESSING', 'FILLED', 'PARTIALLY_FILLED', 'CANCELLED', 'FAILED'],
-    example: 'PENDING',
+    enum: OrderStatusValues,
+    example: OrderStatus.PENDING,
   })
   @IsOptional()
   @IsEnum(OrderStatus)
@@ -25,8 +29,8 @@ export class QueryOrdersDto {
 
   @ApiPropertyOptional({
     description: 'Filter by order side',
-    enum: ['BUY', 'SELL'],
-    example: 'BUY',
+    enum: OrderSideValues,
+    example: OrderSide.BUY,
   })
   @IsOptional()
   @IsEnum(OrderSide)
@@ -34,8 +38,8 @@ export class QueryOrdersDto {
 
   @ApiPropertyOptional({
     description: 'Filter by outcome',
-    enum: ['YES', 'NO'],
-    example: 'YES',
+    enum: OrderOutcomeValues,
+    example: OrderOutcome.YES,
   })
   @IsOptional()
   @IsEnum(OrderOutcome)
@@ -58,10 +62,14 @@ export class QueryOrdersDto {
     default: 20,
   })
   @IsOptional()
+  @Transform(({ value }) => {
+    const num = Number(value);
+    if (isNaN(num) || num < 1) return 20;
+    return Math.min(num, 100);
+  })
   @Type(() => Number)
   @IsInt()
   @Min(1)
-  @Max(100)
   pageSize?: number = 20;
 
   @ApiPropertyOptional({
@@ -70,9 +78,13 @@ export class QueryOrdersDto {
     default: 20,
   })
   @IsOptional()
+  @Transform(({ value }) => {
+    const num = Number(value);
+    if (isNaN(num) || num < 1) return 20;
+    return Math.min(num, 100);
+  })
   @Type(() => Number)
   @IsInt()
   @Min(1)
-  @Max(100)
   limit?: number;
 }
