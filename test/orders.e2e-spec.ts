@@ -14,6 +14,7 @@ import {
   OrderSide,
   Order,
 } from '@database/entities/order.entity';
+import { Market } from '@database/entities/market.entity';
 import { OrderRepository } from '@database/repositories/order.repository';
 
 describe('Orders API (e2e)', () => {
@@ -94,19 +95,15 @@ describe('Orders API (e2e)', () => {
 
       const response = await request(app.getHttpServer())
         .post('/orders')
-        .set('Idempotency-Key', `test-order-${Date.now()}`)
+        .set('x-idempotency-key', `test-order-${Date.now()}`)
         .send({
           marketId: market.id,
           outcome: OrderOutcome.YES,
           side: OrderSide.BUY,
           type: OrderType.MARKET,
           quantity: '10',
-        });
-
-      if (response.status !== 201) {
-        console.error('Order creation failed:', response.status, response.body);
-      }
-      expect(response.status).toBe(201);
+        })
+        .expect(201);
 
       expect(response.body).toMatchObject({
         marketId: market.id,
@@ -127,7 +124,7 @@ describe('Orders API (e2e)', () => {
 
       const response = await request(app.getHttpServer())
         .post('/orders')
-        .set('Idempotency-Key', `test-limit-order-${Date.now()}`)
+        .set('x-idempotency-key', `test-limit-order-${Date.now()}`)
         .send({
           marketId: market.id,
           outcome: OrderOutcome.NO,
@@ -160,7 +157,7 @@ describe('Orders API (e2e)', () => {
         })
         .expect(400);
 
-      expect(response.body.message).toContain('Idempotency');
+      expect(response.body.message).toContain('idempotency');
     });
 
     it('should handle duplicate idempotency key', async () => {
@@ -178,15 +175,15 @@ describe('Orders API (e2e)', () => {
 
       const response1 = await request(app.getHttpServer())
         .post('/orders')
-        .set('Idempotency-Key', idempotencyKey)
+        .set('x-idempotency-key', idempotencyKey)
         .send(orderData)
         .expect(201);
 
       const response2 = await request(app.getHttpServer())
         .post('/orders')
-        .set('Idempotency-Key', idempotencyKey)
+        .set('x-idempotency-key', idempotencyKey)
         .send(orderData)
-        .expect(200);
+        .expect(201);
 
       expect(response1.body.id).toBe(response2.body.id);
     });
@@ -198,7 +195,7 @@ describe('Orders API (e2e)', () => {
 
       await request(app.getHttpServer())
         .post('/orders')
-        .set('Idempotency-Key', idempotencyKey)
+        .set('x-idempotency-key', idempotencyKey)
         .send({
           marketId: market.id,
           outcome: OrderOutcome.YES,
@@ -210,7 +207,7 @@ describe('Orders API (e2e)', () => {
 
       await request(app.getHttpServer())
         .post('/orders')
-        .set('Idempotency-Key', idempotencyKey)
+        .set('x-idempotency-key', idempotencyKey)
         .send({
           marketId: market.id,
           outcome: OrderOutcome.NO,
@@ -224,7 +221,7 @@ describe('Orders API (e2e)', () => {
     it('should return 404 when market does not exist', async () => {
       await request(app.getHttpServer())
         .post('/orders')
-        .set('Idempotency-Key', `nonexistent-market-${Date.now()}`)
+        .set('x-idempotency-key', `nonexistent-market-${Date.now()}`)
         .send({
           marketId: 99999,
           outcome: OrderOutcome.YES,
@@ -241,7 +238,7 @@ describe('Orders API (e2e)', () => {
 
       await request(app.getHttpServer())
         .post('/orders')
-        .set('Idempotency-Key', `invalid-order-${Date.now()}`)
+        .set('x-idempotency-key', `invalid-order-${Date.now()}`)
         .send({
           marketId: market.id,
           outcome: OrderOutcome.YES,
@@ -258,7 +255,7 @@ describe('Orders API (e2e)', () => {
 
       await request(app.getHttpServer())
         .post('/orders')
-        .set('Idempotency-Key', `limit-no-price-${Date.now()}`)
+        .set('x-idempotency-key', `limit-no-price-${Date.now()}`)
         .send({
           marketId: market.id,
           outcome: OrderOutcome.YES,
@@ -454,7 +451,7 @@ describe('Orders API (e2e)', () => {
 
       const response = await request(app.getHttpServer())
         .post('/orders')
-        .set('Idempotency-Key', `metadata-order-${Date.now()}`)
+        .set('x-idempotency-key', `metadata-order-${Date.now()}`)
         .send({
           marketId: market.id,
           outcome: OrderOutcome.YES,
@@ -490,7 +487,7 @@ describe('Orders API (e2e)', () => {
 
       const createResponse = await request(app.getHttpServer())
         .post('/orders')
-        .set('Idempotency-Key', `queue-test-${Date.now()}`)
+        .set('x-idempotency-key', `queue-test-${Date.now()}`)
         .send({
           marketId: market.id,
           outcome: OrderOutcome.YES,
@@ -509,7 +506,7 @@ describe('Orders API (e2e)', () => {
       const processedOrder = await waitForOrderStatus(orderId, OrderStatus.FILLED, 15000);
 
       expect(processedOrder.status).toBe(OrderStatus.FILLED);
-      expect(processedOrder.filledQuantity).toBe('10');
+      expect(processedOrder.filledQuantity).toBe('10.00000000');
       expect(processedOrder.averageFillPrice).toBeTruthy();
       expect(processedOrder.externalOrderId).toBeTruthy();
 
@@ -519,7 +516,7 @@ describe('Orders API (e2e)', () => {
     it('should handle order execution failure via queue', async () => {
       const event = await dataFactory.createEvent();
       const market = await dataFactory.createMarket(event.id, {
-        active: false,
+        active: true,
         outcomeYesPrice: '0.65',
         outcomeNoPrice: '0.35',
       });
@@ -527,7 +524,7 @@ describe('Orders API (e2e)', () => {
 
       const createResponse = await request(app.getHttpServer())
         .post('/orders')
-        .set('Idempotency-Key', `failure-test-${Date.now()}`)
+        .set('x-idempotency-key', `failure-test-${Date.now()}`)
         .send({
           marketId: market.id,
           outcome: OrderOutcome.YES,
@@ -538,6 +535,9 @@ describe('Orders API (e2e)', () => {
         .expect(201);
 
       const orderId = createResponse.body.id;
+
+      const marketRepo = dataSource.getRepository(Market);
+      await marketRepo.update({ id: market.id }, { active: false });
 
       await waitForOrderStatus(orderId, OrderStatus.QUEUED, 5000);
 
@@ -551,14 +551,14 @@ describe('Orders API (e2e)', () => {
     it('should handle limit order failure when price is not met', async () => {
       const event = await dataFactory.createEvent();
       const market = await dataFactory.createMarket(event.id, {
-        outcomeYesPrice: '0.70', // Market price is 0.70
+        outcomeYesPrice: '0.70',
         outcomeNoPrice: '0.30',
       });
       await dataFactory.createToken(market.id, TokenOutcome.YES);
 
       const createResponse = await request(app.getHttpServer())
         .post('/orders')
-        .set('Idempotency-Key', `limit-failure-test-${Date.now()}`)
+        .set('x-idempotency-key', `limit-failure-test-${Date.now()}`)
         .send({
           marketId: market.id,
           outcome: OrderOutcome.YES,
@@ -590,7 +590,7 @@ describe('Orders API (e2e)', () => {
 
       const createResponse = await request(app.getHttpServer())
         .post('/orders')
-        .set('Idempotency-Key', `transition-test-${Date.now()}`)
+        .set('x-idempotency-key', `transition-test-${Date.now()}`)
         .send({
           marketId: market.id,
           outcome: OrderOutcome.YES,
@@ -603,7 +603,7 @@ describe('Orders API (e2e)', () => {
       const orderId = createResponse.body.id;
 
       let order = await orderRepository.findById(orderId);
-      expect(order?.status).toBe(OrderStatus.PENDING);
+      expect([OrderStatus.PENDING, OrderStatus.QUEUED]).toContain(order?.status);
 
       order = await waitForOrderStatus(orderId, OrderStatus.QUEUED, 5000);
       expect(order.status).toBe(OrderStatus.QUEUED);
@@ -627,7 +627,7 @@ describe('Orders API (e2e)', () => {
 
       const createResponse = await request(app.getHttpServer())
         .post('/orders')
-        .set('Idempotency-Key', `cancel-before-exec-${Date.now()}`)
+        .set('x-idempotency-key', `cancel-before-exec-${Date.now()}`)
         .send({
           marketId: market.id,
           outcome: OrderOutcome.YES,

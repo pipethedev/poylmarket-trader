@@ -40,15 +40,15 @@ export class OrdersController {
   @ApiOperation({
     summary: 'Create a new order',
     description:
-      'Creates a new order and queues it for processing. Requires an Idempotency-Key header.',
+      'Creates a new order and queues it for processing. Requires an x-idempotency-key header.',
   })
   @ApiHeader({
-    name: 'Idempotency-Key',
+    name: 'x-idempotency-key',
     description: 'Unique key to ensure idempotent order creation',
     required: true,
     example: 'order-123-abc',
   })
-  @ApiSecurity('Idempotency-Key')
+  @ApiSecurity('x-idempotency-key')
   @ApiResponse({
     status: 201,
     description: 'Order created successfully',
@@ -69,7 +69,7 @@ export class OrdersController {
   })
   async createOrder(
     @Body() dto: CreateOrderDto,
-    @Headers('idempotency-key') idempotencyKey: string,
+    @Headers('x-idempotency-key') idempotencyKey: string,
   ): Promise<OrderResponseDto> {
     if (!idempotencyKey) {
       throw new IdempotencyKeyRequiredException();

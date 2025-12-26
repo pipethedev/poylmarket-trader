@@ -30,7 +30,7 @@ async function bootstrap() {
     .addTag('events', 'Event management and synchronization')
     .addTag('markets', 'Market data and pricing')
     .addTag('orders', 'Order creation and management')
-    .addApiKey({ type: 'apiKey', name: 'Idempotency-Key', in: 'header' }, 'Idempotency-Key')
+    .addApiKey({ type: 'apiKey', name: 'x-idempotency-key', in: 'header' }, 'x-idempotency-key')
     .build();
 
   const document = SwaggerModule.createDocument(app, config);

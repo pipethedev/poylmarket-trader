@@ -6,10 +6,34 @@ import {
   IsInt,
   Min,
   ValidateIf,
-  IsEnum,
+  IsIn,
+  registerDecorator,
+  ValidationOptions,
+  ValidationArguments,
 } from 'class-validator';
 import { Type } from 'class-transformer';
 import { OrderSide, OrderType, OrderOutcome } from '@database/entities/order.entity';
+
+function IsPositiveNumber(validationOptions?: ValidationOptions) {
+  return function (object: object, propertyName: string) {
+    registerDecorator({
+      name: 'isPositiveNumber',
+      target: object.constructor,
+      propertyName: propertyName,
+      options: validationOptions,
+      validator: {
+        validate(value: unknown) {
+          if (typeof value !== 'string') return false;
+          const num = parseFloat(value);
+          return !isNaN(num) && num > 0;
+        },
+        defaultMessage(args: ValidationArguments) {
+          return `${args.property} must be a positive number greater than 0`;
+        },
+      },
+    });
+  };
+}
 
 const OrderSideValues = Object.values(OrderSide);
 const OrderTypeValues = Object.values(OrderType);
@@ -30,7 +54,7 @@ export class CreateOrderDto {
     enum: OrderSideValues,
     example: OrderSide.BUY,
   })
-  @IsEnum(OrderSide)
+  @IsIn(OrderSideValues)
   side: OrderSide;
 
   @ApiProperty({
@@ -38,7 +62,7 @@ export class CreateOrderDto {
     enum: OrderTypeValues,
     example: OrderType.LIMIT,
   })
-  @IsEnum(OrderType)
+  @IsIn(OrderTypeValues)
   type: OrderType;
 
   @ApiProperty({
@@ -46,7 +70,7 @@ export class CreateOrderDto {
     enum: OrderOutcomeValues,
     example: OrderOutcome.YES,
   })
-  @IsEnum(OrderOutcome)
+  @IsIn(OrderOutcomeValues)
   outcome: OrderOutcome;
 
   @ApiProperty({
@@ -54,6 +78,7 @@ export class CreateOrderDto {
     example: '100.00000000',
   })
   @IsNumberString()
+  @IsPositiveNumber()
   @IsNotEmpty()
   quantity: string;
 

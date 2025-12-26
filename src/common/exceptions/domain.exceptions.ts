@@ -93,7 +93,7 @@ export class IdempotencyKeyRequiredException extends AppException {
   constructor() {
     super(
       'IDEMPOTENCY_KEY_REQUIRED',
-      'Idempotency-Key header is required for this operation',
+      'x-idempotency-key header is required for this operation',
       HttpStatus.BAD_REQUEST,
     );
   }
