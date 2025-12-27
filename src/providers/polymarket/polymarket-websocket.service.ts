@@ -26,11 +26,13 @@ export class PolymarketWebSocketService implements OnModuleInit, OnModuleDestroy
   private reconnectAttempts = 0;
   private maxReconnectAttempts = 10;
   private reconnectTimer: NodeJS.Timeout | null = null;
+  private connectionTimeout: NodeJS.Timeout | null = null;
   private subscribedTokenIds = new Set<string>();
   private readonly logger: AppLogger;
   private readonly baseWsUrl: string;
   private readonly enabled: boolean;
   private readonly reconnectDelay: number;
+  private readonly connectionTimeoutMs = 10000;
   private isShuttingDown = false;
   private pingInterval: NodeJS.Timeout | null = null;
 
@@ -73,10 +75,28 @@ export class PolymarketWebSocketService implements OnModuleInit, OnModuleDestroy
     const wsUrl = this.getWsUrl();
     this.logger.log(`Connecting to WebSocket: ${wsUrl}`);
 
+    this.connectionTimeout = setTimeout(() => {
+      if (this.connectionState === 'connecting' && this.ws) {
+        this.logger.error(
+          `WebSocket connection timeout exceeded when trying to connect to ${wsUrl}`,
+        );
+        this.connectionState = 'error';
+        this.ws.close();
+        this.ws = null;
+        if (!this.isShuttingDown) {
+          this.scheduleReconnect();
+        }
+      }
+    }, this.connectionTimeoutMs);
+
     try {
       this.ws = new WebSocket(wsUrl);
 
       this.ws.on('open', () => {
+        if (this.connectionTimeout) {
+          clearTimeout(this.connectionTimeout);
+          this.connectionTimeout = null;
+        }
         this.logger.log('WebSocket connected');
         this.connectionState = 'connected';
         this.reconnectAttempts = 0;
@@ -118,11 +138,19 @@ export class PolymarketWebSocketService implements OnModuleInit, OnModuleDestroy
       });
 
       this.ws.on('error', (error: Error) => {
+        if (this.connectionTimeout) {
+          clearTimeout(this.connectionTimeout);
+          this.connectionTimeout = null;
+        }
         this.logger.error(`WebSocket error: ${error.message} (URL: ${wsUrl})`);
         this.connectionState = 'error';
       });
 
       this.ws.on('close', (code: number, reason: Buffer) => {
+        if (this.connectionTimeout) {
+          clearTimeout(this.connectionTimeout);
+          this.connectionTimeout = null;
+        }
         this.logger.warn(`WebSocket closed: code=${code}, reason=${reason.toString()}`);
         this.connectionState = 'disconnected';
         this.stopPingInterval();
@@ -323,6 +351,11 @@ export class PolymarketWebSocketService implements OnModuleInit, OnModuleDestroy
     if (this.reconnectTimer) {
       clearTimeout(this.reconnectTimer);
       this.reconnectTimer = null;
+    }
+
+    if (this.connectionTimeout) {
+      clearTimeout(this.connectionTimeout);
+      this.connectionTimeout = null;
     }
 
     if (this.ws) {

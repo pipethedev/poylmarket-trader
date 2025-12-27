@@ -12,7 +12,7 @@ import {
 import { Wallet } from '@ethersproject/wallet';
 import { JsonRpcProvider } from '@ethersproject/providers';
 import { getAddress } from '@ethersproject/address';
-import type { WalletContext } from '@app-types/index';
+import type { CancelResult, WalletContext } from '@app-types/index';
 
 export interface PaginationPayload {
   data: unknown[];
@@ -349,6 +349,41 @@ export class PolymarketClobService {
     this.logger.log(`ClobClient created and cached for wallet: ${walletAddress}`);
 
     return userClient;
+  }
+
+  async cancelOrder(orderId: string, walletContext?: WalletContext): Promise<CancelResult> {
+    const client = walletContext?.walletAddress
+      ? await this.getUserClient(walletContext.walletAddress)
+      : await this.getAuthenticatedClient();
+
+    try {
+      this.logger.log(`Cancelling order on Polymarket: ${orderId}`);
+
+      const response = await client.cancelOrder({ orderID: orderId });
+
+      if (response.error) {
+        const errorMessage =
+          typeof response.error === 'string' ? response.error : JSON.stringify(response.error);
+
+        this.logger.error(`Order cancellation failed: ${errorMessage}`);
+        return {
+          success: false,
+          orderId,
+          message: errorMessage,
+        };
+      }
+
+      this.logger.log(`Order cancelled successfully on Polymarket: ${orderId}`);
+      return {
+        success: true,
+        orderId,
+        message: 'Order cancelled successfully',
+      };
+    } catch (error) {
+      const errorMessage = (error as Error).message;
+      this.logger.error(`Error cancelling order: ${errorMessage}`, (error as Error).stack);
+      throw error;
+    }
   }
 
   isRealTradingEnabled(): boolean {

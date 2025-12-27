@@ -1,4 +1,4 @@
-import { Injectable, Optional } from '@nestjs/common';
+import { Injectable, Optional, Inject } from '@nestjs/common';
 import { InjectQueue } from '@nestjs/bullmq';
 import { DataSource } from 'typeorm';
 import { Queue } from 'bullmq';
@@ -20,7 +20,8 @@ import {
 import { CreateOrderDto } from './dto/create-order.dto';
 import { QueryOrdersDto } from './dto/query-orders.dto';
 import { OrderResponseDto, OrderListResponseDto } from './dto/order-response.dto';
-import type { OrderJobData } from '@app-types/index';
+import type { OrderJobData, MarketProvider, WalletContext, CancelResult } from '@app-types/index';
+import { MARKET_PROVIDER } from '@providers/market-provider.interface';
 import { PolymarketClobService } from '@providers/polymarket/polymarket-clob.service';
 import { SignatureValidationService } from '@common/services/signature-validation.service';
 import { UsdcTokenService } from '@common/services/usdc-token.service';
@@ -39,6 +40,9 @@ export class OrdersService {
     private readonly ordersQueue: Queue<OrderJobData>,
     private readonly dataSource: DataSource,
     private readonly signatureValidationService: SignatureValidationService,
+    @Inject(MARKET_PROVIDER)
+    @Optional()
+    private readonly marketProvider?: MarketProvider,
     @Optional()
     private readonly clobService?: PolymarketClobService,
     @Optional()
@@ -210,12 +214,53 @@ export class OrdersService {
 
       const cancellableStatuses: OrderStatus[] = [OrderStatus.PENDING, OrderStatus.QUEUED];
 
-      if (!cancellableStatuses.includes(order.status)) {
+      const hasExternalOrderId = !!order.externalOrderId;
+
+      if (order.status === OrderStatus.PROCESSING) {
+        if (!hasExternalOrderId) {
+          this.logger.warn(
+            `Order is PROCESSING without externalOrderId, cannot cancel until placement completes`,
+          );
+          throw new OrderNotCancellableException(String(id), order.status);
+        }
+      } else if (!cancellableStatuses.includes(order.status)) {
         this.logger.warn(`Order cannot be cancelled in status: ${order.status}`);
         throw new OrderNotCancellableException(String(id), order.status);
       }
 
       const wasQueued = order.status === OrderStatus.QUEUED;
+
+      if (hasExternalOrderId && this.marketProvider?.cancelOrder) {
+        try {
+          const walletContext: WalletContext | undefined = order.userWalletAddress
+            ? {
+                walletAddress: order.userWalletAddress,
+                signature: '',
+                nonce: '',
+                message: '',
+              }
+            : undefined;
+
+          const cancelResult = await (
+            this.marketProvider.cancelOrder as (
+              orderId: string,
+              walletContext?: WalletContext,
+            ) => Promise<CancelResult>
+          )(order.externalOrderId!, walletContext);
+
+          if (!cancelResult.success) {
+            this.logger.warn(
+              `Failed to cancel order on Polymarket: ${cancelResult.message}. Proceeding with local cancellation.`,
+            );
+          } else {
+            this.logger.log(`Order cancelled on Polymarket: ${order.externalOrderId}`);
+          }
+        } catch (error) {
+          this.logger.warn(
+            `Error cancelling order on Polymarket: ${(error as Error).message}. Proceeding with local cancellation.`,
+          );
+        }
+      }
 
       order.status = OrderStatus.CANCELLED;
       const savedOrder = await queryRunner.manager.save(Order, order);

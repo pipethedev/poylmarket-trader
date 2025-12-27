@@ -109,7 +109,7 @@ export type MarketProvider = {
   getAllMarkets(params?: MarketQueryParams): Promise<ProviderMarket[]>;
   getMarketPrice(marketId: string): Promise<MarketPrice | null>;
   placeOrder?(order: OrderRequest): Promise<OrderResult>;
-  cancelOrder?(orderId: string): Promise<CancelResult>;
+  cancelOrder?(orderId: string, walletContext?: WalletContext): Promise<CancelResult>;
   getOrderStatus?(orderId: string): Promise<OrderStatus>;
   healthCheck(): Promise<boolean>;
 };

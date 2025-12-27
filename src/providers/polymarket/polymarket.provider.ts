@@ -12,6 +12,8 @@ import type {
   ProviderToken,
   OrderRequest,
   OrderResult,
+  WalletContext,
+  CancelResult,
 } from '@app-types/index';
 import { PolymarketHttpService } from './polymarket-http.service';
 import { PolymarketClobService } from './polymarket-clob.service';
@@ -184,12 +186,14 @@ export class PolymarketProvider implements MarketProvider {
 
       let orderPrice: number;
       if (order.type === 'MARKET') {
-        orderPrice = token.price ?? parseFloat(order.outcome === 'YES' ? '0.5' : '0.5');
+        const marketPrice = token.price ?? parseFloat(order.outcome === 'YES' ? '0.5' : '0.5');
+        orderPrice = Math.max(marketPrice, 0.001);
       } else {
         if (!order.price) {
           throw new Error('Limit orders require a price');
         }
-        orderPrice = parseFloat(order.price);
+        const limitPrice = parseFloat(order.price);
+        orderPrice = Math.max(limitPrice, 0.001);
       }
 
       const walletContext = order.walletContext;
@@ -236,6 +240,35 @@ export class PolymarketProvider implements MarketProvider {
     } catch (error) {
       this.logger.error(`Failed to place order: ${(error as Error).message}`);
       throw this.handleError(error, 'placeOrder');
+    }
+  }
+
+  async cancelOrder(orderId: string, walletContext?: WalletContext): Promise<CancelResult> {
+    try {
+      this.logger
+        .setContextData({ orderId: Number(orderId) })
+        .log(`Cancelling order on Polymarket`);
+
+      const result = await this.clob.cancelOrder(orderId, walletContext);
+
+      if (!result.success) {
+        this.logger.error(`Failed to cancel order on Polymarket: ${result.message}`);
+        return {
+          success: false,
+          orderId,
+          message: result.message || 'Failed to cancel order',
+        };
+      }
+
+      this.logger.log(`Order cancelled successfully on Polymarket: ${orderId}`);
+      return {
+        success: true,
+        orderId,
+        message: result.message || 'Order cancelled successfully',
+      };
+    } catch (error) {
+      this.logger.error(`Failed to cancel order: ${(error as Error).message}`);
+      throw this.handleError(error, 'cancelOrder');
     }
   }
 

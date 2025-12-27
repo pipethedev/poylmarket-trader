@@ -36,6 +36,26 @@ export class ClobClient {
   async getTickSize(_tokenId: string): Promise<{ minimum_tick_size: string }> {
     return { minimum_tick_size: '0.01' };
   }
+
+  async cancelOrder(_orderId: { orderID: string } | string): Promise<{ canceled: string[]; not_canceled?: Record<string, string>; error?: string }> {
+    const orderId = typeof _orderId === 'string' ? _orderId : _orderId.orderID;
+    return { canceled: [orderId] };
+  }
+
+  async cancelOrders(_orderIds: { orderID: string }[] | string[]): Promise<{ canceled: string[]; not_canceled?: Record<string, string>; error?: string }> {
+    const orderIds = Array.isArray(_orderIds) && _orderIds.length > 0 && typeof _orderIds[0] === 'string'
+      ? _orderIds as string[]
+      : (_orderIds as { orderID: string }[]).map(o => o.orderID);
+    return { canceled: orderIds };
+  }
+
+  async cancelAll(): Promise<{ canceled: string[]; not_canceled?: Record<string, string>; error?: string }> {
+    return { canceled: [] };
+  }
+
+  async cancelMarketOrders(_params: { market: string; asset_id: string }): Promise<{ canceled: string[]; not_canceled?: Record<string, string>; error?: string }> {
+    return { canceled: [] };
+  }
 }
 
 export interface OrderBookSummary {
