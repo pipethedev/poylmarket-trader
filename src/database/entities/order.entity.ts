@@ -51,7 +51,7 @@ export class Order {
   @PrimaryGeneratedColumn()
   id: number;
 
-  @Column({ name: 'idempotency_key', unique: true })
+  @Column({ name: 'idempotency_key' })
   @Index('idx_orders_idempotency_key')
   idempotencyKey: string;
 

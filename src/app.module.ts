@@ -3,6 +3,7 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { BullModule } from '@nestjs/bullmq';
 import configuration from '@config/configuration';
+import { envValidationSchema } from '@config/env.validation';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { CommonModule } from '@common/common.module';
@@ -17,6 +18,11 @@ import { OrdersModule } from '@modules/orders/orders.module';
     ConfigModule.forRoot({
       isGlobal: true,
       load: [configuration],
+      validationSchema: envValidationSchema,
+      validationOptions: {
+        allowUnknown: true,
+        abortEarly: false,
+      },
     }),
 
     TypeOrmModule.forRootAsync({
@@ -35,8 +41,9 @@ import { OrdersModule } from '@modules/orders/orders.module';
           password: configService.get<string>('database.password'),
           database: configService.get<string>('database.database'),
           entities: [__dirname + '/database/entities/*.entity{.ts,.js}'],
-          migrations: [__dirname + '/database/migrations/*{.ts,.js}'],
           synchronize: false,
+          migrationsRun: false,
+          migrationsTableName: undefined,
           logging: process.env.NODE_ENV === 'development',
           extra: {
             max: 50,

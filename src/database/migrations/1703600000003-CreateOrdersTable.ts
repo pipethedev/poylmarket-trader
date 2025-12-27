@@ -23,7 +23,6 @@ export class CreateOrdersTable1703600000003 implements MigrationInterface {
         "version" integer NOT NULL DEFAULT 1,
         "created_at" TIMESTAMP NOT NULL DEFAULT now(),
         "updated_at" TIMESTAMP NOT NULL DEFAULT now(),
-        CONSTRAINT "UQ_orders_idempotency_key" UNIQUE ("idempotency_key"),
         CONSTRAINT "FK_orders_market" FOREIGN KEY ("market_id") REFERENCES "markets"("id") ON DELETE CASCADE
       )
     `);
