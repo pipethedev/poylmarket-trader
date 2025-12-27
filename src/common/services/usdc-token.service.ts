@@ -1,6 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { Contract } from 'ethers';
+import { Contract } from '@ethersproject/contracts';
 import { Wallet } from '@ethersproject/wallet';
 import { StaticJsonRpcProvider } from '@ethersproject/providers';
 import { getAddress } from '@ethersproject/address';

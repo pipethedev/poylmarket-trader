@@ -33,6 +33,7 @@
     "@bull-board/express": "^6.16.1",
     "@bull-board/nestjs": "^6.16.1",
     "@ethersproject/address": "^5.8.0",
+    "@ethersproject/contracts": "^5.8.0",
     "@ethersproject/providers": "^5.8.0",
     "@ethersproject/wallet": "^5.8.0",
     "@nestjs/axios": "^4.0.1",
