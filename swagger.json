@@ -50,6 +50,16 @@
             }
           },
           {
+            "name": "featured",
+            "required": false,
+            "in": "query",
+            "description": "Filter by featured status",
+            "schema": {
+              "example": true,
+              "type": "boolean"
+            }
+          },
+          {
             "name": "search",
             "required": false,
             "in": "query",
@@ -238,12 +248,102 @@
             }
           },
           {
+            "name": "closed",
+            "required": false,
+            "in": "query",
+            "description": "Filter by closed status",
+            "schema": {
+              "example": false,
+              "type": "boolean"
+            }
+          },
+          {
             "name": "search",
             "required": false,
             "in": "query",
             "description": "Search by question",
             "schema": {
               "example": "Bitcoin",
+              "type": "string"
+            }
+          },
+          {
+            "name": "volumeMin",
+            "required": false,
+            "in": "query",
+            "description": "Minimum volume",
+            "schema": {
+              "example": 1000,
+              "type": "number"
+            }
+          },
+          {
+            "name": "volumeMax",
+            "required": false,
+            "in": "query",
+            "description": "Maximum volume",
+            "schema": {
+              "example": 1000000,
+              "type": "number"
+            }
+          },
+          {
+            "name": "liquidityMin",
+            "required": false,
+            "in": "query",
+            "description": "Minimum liquidity",
+            "schema": {
+              "example": 500,
+              "type": "number"
+            }
+          },
+          {
+            "name": "liquidityMax",
+            "required": false,
+            "in": "query",
+            "description": "Maximum liquidity",
+            "schema": {
+              "example": 50000,
+              "type": "number"
+            }
+          },
+          {
+            "name": "createdAtMin",
+            "required": false,
+            "in": "query",
+            "description": "Minimum creation date (ISO 8601)",
+            "schema": {
+              "example": "2024-01-01T00:00:00.000Z",
+              "type": "string"
+            }
+          },
+          {
+            "name": "createdAtMax",
+            "required": false,
+            "in": "query",
+            "description": "Maximum creation date (ISO 8601)",
+            "schema": {
+              "example": "2024-12-31T23:59:59.999Z",
+              "type": "string"
+            }
+          },
+          {
+            "name": "updatedAtMin",
+            "required": false,
+            "in": "query",
+            "description": "Minimum update date (ISO 8601)",
+            "schema": {
+              "example": "2024-01-01T00:00:00.000Z",
+              "type": "string"
+            }
+          },
+          {
+            "name": "updatedAtMax",
+            "required": false,
+            "in": "query",
+            "description": "Maximum update date (ISO 8601)",
+            "schema": {
+              "example": "2024-12-31T23:59:59.999Z",
               "type": "string"
             }
           },
@@ -619,6 +719,209 @@
           "orders"
         ]
       }
+    },
+    "/orders/usdc/balance/{address}": {
+      "get": {
+        "description": "Retrieves the USDC balance of a wallet address",
+        "operationId": "OrdersController_getUsdcBalance",
+        "parameters": [
+          {
+            "name": "address",
+            "required": true,
+            "in": "path",
+            "description": "Wallet address",
+            "schema": {
+              "example": "0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "USDC balance retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "balance": {
+                      "type": "string",
+                      "example": "1000.5"
+                    },
+                    "address": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "summary": "Get USDC balance",
+        "tags": [
+          "orders"
+        ]
+      }
+    },
+    "/orders/usdc/allowance/{address}": {
+      "get": {
+        "description": "Retrieves the USDC allowance that a wallet has granted to the server",
+        "operationId": "OrdersController_getUsdcAllowance",
+        "parameters": [
+          {
+            "name": "address",
+            "required": true,
+            "in": "path",
+            "description": "Wallet address",
+            "schema": {
+              "example": "0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "USDC allowance retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "allowance": {
+                      "type": "string",
+                      "example": "500.0"
+                    },
+                    "address": {
+                      "type": "string"
+                    },
+                    "serverWallet": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "summary": "Get USDC allowance",
+        "tags": [
+          "orders"
+        ]
+      }
+    },
+    "/orders/usdc/info": {
+      "get": {
+        "description": "Retrieves USDC contract address, server wallet address, and funder address",
+        "operationId": "OrdersController_getUsdcInfo",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "USDC info retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "usdcAddress": {
+                      "type": "string"
+                    },
+                    "serverWallet": {
+                      "type": "string"
+                    },
+                    "funderAddress": {
+                      "type": "string"
+                    },
+                    "rpcUrl": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "summary": "Get USDC contract and server wallet info",
+        "tags": [
+          "orders"
+        ]
+      }
+    },
+    "/orders/usdc/server-wallet/balance": {
+      "get": {
+        "description": "Retrieves the server wallet MATIC balance needed for gas fees",
+        "operationId": "OrdersController_getServerWalletBalance",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Server wallet balance retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "address": {
+                      "type": "string"
+                    },
+                    "balance": {
+                      "type": "string"
+                    },
+                    "balanceFormatted": {
+                      "type": "string"
+                    },
+                    "minRequired": {
+                      "type": "string"
+                    },
+                    "hasEnough": {
+                      "type": "boolean"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "summary": "Get server wallet MATIC balance",
+        "tags": [
+          "orders"
+        ]
+      }
+    },
+    "/orders/usdc/gas-estimate": {
+      "get": {
+        "description": "Estimates the gas fees (in MATIC and USD equivalent) for transferring USDC",
+        "operationId": "OrdersController_getGasEstimate",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Gas estimate retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "estimatedGasMatic": {
+                      "type": "string"
+                    },
+                    "estimatedGasUsd": {
+                      "type": "string"
+                    },
+                    "gasPriceGwei": {
+                      "type": "string"
+                    },
+                    "note": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "summary": "Estimate gas fees for USDC transfer",
+        "tags": [
+          "orders"
+        ]
+      }
     }
   },
   "info": {
@@ -679,6 +982,11 @@
             "description": "Event slug",
             "example": "bitcoin-100k-2024"
           },
+          "image": {
+            "type": "object",
+            "description": "Event image URL",
+            "example": "https://polymarket-upload.s3.us-east-2.amazonaws.com/event-image.png"
+          },
           "startDate": {
             "type": "object",
             "description": "Event start date",
@@ -692,6 +1000,11 @@
           "active": {
             "type": "boolean",
             "description": "Whether the event is active",
+            "example": true
+          },
+          "featured": {
+            "type": "boolean",
+            "description": "Whether the event is featured",
             "example": true
           },
           "createdAt": {
@@ -717,6 +1030,7 @@
           "externalId",
           "title",
           "active",
+          "featured",
           "createdAt",
           "updatedAt"
         ]
@@ -804,6 +1118,11 @@
             "description": "Event slug",
             "example": "bitcoin-100k-2024"
           },
+          "image": {
+            "type": "object",
+            "description": "Event image URL",
+            "example": "https://polymarket-upload.s3.us-east-2.amazonaws.com/event-image.png"
+          },
           "startDate": {
             "type": "object",
             "description": "Event start date",
@@ -817,6 +1136,11 @@
           "active": {
             "type": "boolean",
             "description": "Whether the event is active",
+            "example": true
+          },
+          "featured": {
+            "type": "boolean",
+            "description": "Whether the event is featured",
             "example": true
           },
           "createdAt": {
@@ -849,6 +1173,7 @@
           "externalId",
           "title",
           "active",
+          "featured",
           "createdAt",
           "updatedAt"
         ]
@@ -856,11 +1181,6 @@
       "SyncResponseDto": {
         "type": "object",
         "properties": {
-          "jobId": {
-            "type": "string",
-            "description": "Job ID for tracking the sync operation",
-            "example": "1234567890"
-          },
           "message": {
             "type": "string",
             "description": "Message describing the sync operation status",
@@ -868,7 +1188,6 @@
           }
         },
         "required": [
-          "jobId",
           "message"
         ]
       },
@@ -903,6 +1222,11 @@
           "description": {
             "type": "object",
             "description": "Market description"
+          },
+          "image": {
+            "type": "object",
+            "description": "Market image URL",
+            "example": "https://polymarket-upload.s3.us-east-2.amazonaws.com/market-image.png"
           },
           "outcomeYesPrice": {
             "type": "string",
@@ -1051,6 +1375,11 @@
             "type": "object",
             "description": "Market description"
           },
+          "image": {
+            "type": "object",
+            "description": "Market image URL",
+            "example": "https://polymarket-upload.s3.us-east-2.amazonaws.com/market-image.png"
+          },
           "outcomeYesPrice": {
             "type": "string",
             "description": "YES outcome price",
@@ -1168,6 +1497,21 @@
             "description": "Limit price (required for LIMIT orders)",
             "example": "0.65000000"
           },
+          "walletAddress": {
+            "type": "string",
+            "description": "Wallet address of the user placing the order",
+            "example": "0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb"
+          },
+          "signature": {
+            "type": "string",
+            "description": "Signature of the order message (required if walletAddress is provided)",
+            "example": "0x..."
+          },
+          "nonce": {
+            "type": "string",
+            "description": "Nonce used for message signing (required if walletAddress is provided)",
+            "example": "1234567890"
+          },
           "metadata": {
             "type": "object",
             "description": "Additional metadata for the order"
@@ -1268,6 +1612,11 @@
             "type": "object",
             "description": "Reason for failure if status is FAILED"
           },
+          "userWalletAddress": {
+            "type": "object",
+            "description": "Wallet address of the user who placed the order",
+            "example": "0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb"
+          },
           "createdAt": {
             "format": "date-time",
             "type": "string",
@@ -1295,6 +1644,31 @@
           "updatedAt"
         ]
       },
+      "OrderStatsDto": {
+        "type": "object",
+        "properties": {
+          "totalOrders": {
+            "type": "number",
+            "description": "Total number of orders in the database",
+            "example": 150
+          },
+          "openOrders": {
+            "type": "number",
+            "description": "Number of open orders on CLOB (requires real trading)",
+            "example": 5
+          },
+          "trades": {
+            "type": "number",
+            "description": "Number of trades executed (requires real trading)",
+            "example": 45
+          }
+        },
+        "required": [
+          "totalOrders",
+          "openOrders",
+          "trades"
+        ]
+      },
       "OrderListResponseDto": {
         "type": "object",
         "properties": {
@@ -1310,6 +1684,14 @@
             "allOf": [
               {
                 "$ref": "#/components/schemas/PaginationMetaDto"
+              }
+            ]
+          },
+          "stats": {
+            "description": "Order statistics (only available when real trading is enabled)",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/OrderStatsDto"
               }
             ]
           }
