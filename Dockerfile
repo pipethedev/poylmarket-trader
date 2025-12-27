@@ -14,4 +14,4 @@ RUN pnpm run build
 
 EXPOSE 3000
 
-CMD ["node", "dist/src/main"]
+CMD ["sh", "-c", "node -r tsconfig-paths/register ./node_modules/typeorm/cli.js migration:run -d dist/src/config/typeorm.config.js && node dist/src/main"]
