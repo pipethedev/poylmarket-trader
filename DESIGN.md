@@ -20,7 +20,9 @@ All orders are pushed to a BullMQ queue for asynchronous processing. This decoup
 
 #### Order Flow: UI Dashboard vs Direct API
 
-As a bonus, I built a UI dashboard to interact with the order endpoints. The order flow differs depending on whether users interact through the UI or directly via the API:
+As a bonus, I built a UI dashboard to interact with the order endpoints. The frontend application is deployed and available at: **https://polymart-trader-client.brimble.app/**
+
+The order flow differs depending on whether users interact through the UI or directly via the API:
 
 **UI Dashboard Flow (Wallet-Connected Users):**
 

@@ -25,6 +25,8 @@
 
 Polymarket Trading Service - A NestJS-based application for integrating with Polymarket prediction markets. This service provides APIs for managing events, markets, and orders with queue-based execution, idempotency, and transactional safety.
 
+> **Design Decisions**: For detailed information about my implementation checkout [DESIGN.md](./DESIGN.md).
+
 ## Features
 
 - Event and Market synchronization with Polymarket
