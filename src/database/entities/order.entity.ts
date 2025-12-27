@@ -108,6 +108,10 @@ export class Order {
   @Column({ name: 'external_order_id', type: 'varchar', nullable: true })
   externalOrderId: string | null;
 
+  @Column({ name: 'user_wallet_address', type: 'varchar', nullable: true })
+  @Index('idx_orders_user_wallet_address')
+  userWalletAddress: string | null;
+
   @Column({ name: 'failure_reason', type: 'text', nullable: true })
   failureReason: string | null;
 

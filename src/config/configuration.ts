@@ -30,9 +30,36 @@ export default (): AppConfig => ({
       : 1,
     chainId: process.env.POLYMARKET_CHAIN_ID ? parseInt(process.env.POLYMARKET_CHAIN_ID, 10) : 137,
     enableRealTrading: process.env.POLYMARKET_ENABLE_REAL_TRADING === 'true',
+    rpcUrl: process.env.POLYMARKET_RPC_URL,
+    clobWebSocketUrl:
+      process.env.POLYMARKET_CLOB_WEBSOCKET_URL ?? 'wss://ws-subscriptions-clob.polymarket.com',
+    websocketEnabled: process.env.POLYMARKET_WEBSOCKET_ENABLED !== 'false',
+    websocketReconnectDelay: parseInt(
+      process.env.POLYMARKET_WEBSOCKET_RECONNECT_DELAY ?? '5000',
+      10,
+    ),
+    websocketCustomFeaturesEnabled: process.env.POLYMARKET_WEBSOCKET_CUSTOM_FEATURES === 'true',
   },
   scheduler: {
     syncCron: process.env.SYNC_CRON_EXPRESSION ?? '*/15 * * * *',
     priceUpdateCron: process.env.PRICE_UPDATE_CRON_EXPRESSION ?? '*/5 * * * *',
+    syncDaysBack: process.env.SCHEDULER_SYNC_DAYS_BACK
+      ? parseInt(process.env.SCHEDULER_SYNC_DAYS_BACK, 10)
+      : 60,
+  },
+  cors: {
+    origins: process.env.CORS_ORIGINS
+      ? process.env.CORS_ORIGINS.split(',').map((origin) => origin.trim())
+      : [
+          'http://localhost:3000',
+          'http://localhost:3001',
+          'http://127.0.0.1:3000',
+          'http://127.0.0.1:3001',
+          'https://poylmarket-trader.brimble.app',
+          'https://polymart-trade.xyz',
+        ],
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'x-idempotency-key'],
+    credentials: true,
   },
 });

@@ -81,7 +81,7 @@ export class SchedulerService implements OnModuleInit {
   }
 
   async handlePriceUpdate(): Promise<void> {
-    this.logger.log('Starting scheduled price update');
+    this.logger.log('Starting scheduled price update (polling fallback)');
     const startTime = Date.now();
 
     try {
@@ -89,7 +89,7 @@ export class SchedulerService implements OnModuleInit {
 
       const duration = Date.now() - startTime;
       this.logger.log(
-        `Price update completed in ${duration}ms - ` +
+        `Price update completed in ${duration}ms (polling) - ` +
           `Updated: ${result.updated} | Errors: ${result.errors.length}`,
       );
 

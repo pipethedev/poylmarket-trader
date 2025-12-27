@@ -4,6 +4,8 @@ export interface PolymarketGammaEvent {
   slug: string;
   title: string;
   description: string;
+  image?: string;
+  icon?: string;
   startDate: string;
   creationDate: string;
   endDate: string;
@@ -23,6 +25,8 @@ export interface PolymarketGammaMarket {
   question: string;
   conditionId: string;
   slug: string;
+  image?: string;
+  icon?: string;
   resolutionSource: string;
   endDate: string;
   liquidity: string;

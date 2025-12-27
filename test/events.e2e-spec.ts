@@ -166,10 +166,9 @@ describe('Events API (e2e)', () => {
       const response = await request(app.getHttpServer()).post('/events/sync').expect(200);
 
       expect(response.body).toHaveProperty('message');
-      expect(response.body).toHaveProperty('syncedEvents');
-      expect(response.body).toHaveProperty('syncedMarkets');
-      expect(typeof response.body.syncedEvents).toBe('number');
-      expect(typeof response.body.syncedMarkets).toBe('number');
+      expect(response.body.message).toBe(
+        'Sync job has been queued and will be processed in the background',
+      );
     });
 
     it('should accept optional limit parameter', async () => {
@@ -178,8 +177,10 @@ describe('Events API (e2e)', () => {
         .query({ limit: 50 })
         .expect(200);
 
-      expect(response.body).toHaveProperty('syncedEvents');
-      expect(response.body).toHaveProperty('syncedMarkets');
+      expect(response.body).toHaveProperty('message');
+      expect(response.body.message).toBe(
+        'Sync job has been queued and will be processed in the background',
+      );
     });
 
     it('should handle sync with existing events gracefully', async () => {
@@ -188,8 +189,10 @@ describe('Events API (e2e)', () => {
         .query({ limit: 10 })
         .expect(200);
 
-      expect(response.body).toHaveProperty('syncedEvents');
-      expect(response.body).toHaveProperty('syncedMarkets');
+      expect(response.body).toHaveProperty('message');
+      expect(response.body.message).toBe(
+        'Sync job has been queued and will be processed in the background',
+      );
     });
   });
 

@@ -13,6 +13,15 @@ export class QueryEventsDto {
   active?: boolean;
 
   @ApiPropertyOptional({
+    description: 'Filter by featured status',
+    example: true,
+  })
+  @IsOptional()
+  @Transform(({ value }) => value === 'true' || value === true)
+  @IsBoolean()
+  featured?: boolean;
+
+  @ApiPropertyOptional({
     description: 'Search by title',
     example: 'Bitcoin',
   })

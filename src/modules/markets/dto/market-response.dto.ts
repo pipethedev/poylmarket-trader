@@ -64,6 +64,12 @@ export class MarketResponseDto {
   })
   description?: string | null;
 
+  @ApiPropertyOptional({
+    description: 'Market image URL',
+    example: 'https://polymarket-upload.s3.us-east-2.amazonaws.com/market-image.png',
+  })
+  image?: string | null;
+
   @ApiProperty({
     description: 'YES outcome price',
     example: '0.65000000',

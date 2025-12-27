@@ -5,11 +5,12 @@ import { OrderResponseDto } from '@modules/orders/dto/order-response.dto';
 export interface CreateOrderParams {
   dto: CreateOrderDto;
   idempotencyKey: string;
+  userWalletAddress?: string | null;
 }
 
 export class OrderFactory {
   static create(params: CreateOrderParams): Partial<Order> {
-    const { dto, idempotencyKey } = params;
+    const { dto, idempotencyKey, userWalletAddress } = params;
 
     return {
       idempotencyKey,
@@ -21,6 +22,7 @@ export class OrderFactory {
       price: dto.price,
       status: OrderStatus.PENDING,
       filledQuantity: '0',
+      userWalletAddress: userWalletAddress ?? null,
       metadata: dto.metadata,
     };
   }
@@ -40,6 +42,7 @@ export class OrderFactory {
       averageFillPrice: order.averageFillPrice,
       externalOrderId: order.externalOrderId,
       failureReason: order.failureReason,
+      userWalletAddress: order.userWalletAddress,
       createdAt: order.createdAt,
       updatedAt: order.updatedAt,
     };

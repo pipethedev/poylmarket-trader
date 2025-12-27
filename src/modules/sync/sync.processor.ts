@@ -31,8 +31,14 @@ export class SyncProcessor extends WorkerHost {
 
     jobLogger.log('Processing sync job');
 
+    const progressInterval = setInterval(() => {
+      void job.updateProgress({ status: 'processing', timestamp: Date.now() }).catch(() => {});
+    }, 30000);
+
     try {
       const result = await this.syncService.syncEvents(limit);
+
+      clearInterval(progressInterval);
 
       jobLogger.log(
         `Sync completed - Events: ${result.eventsCreated} created, ${result.eventsUpdated} updated | ` +
@@ -51,6 +57,7 @@ export class SyncProcessor extends WorkerHost {
         marketsUpdated: result.marketsUpdated,
       };
     } catch (error) {
+      clearInterval(progressInterval);
       jobLogger.error(`Sync job failed: ${(error as Error).message}`, (error as Error).stack);
       throw error;
     }

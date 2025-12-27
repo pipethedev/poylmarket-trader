@@ -158,6 +158,7 @@ export class OrdersProcessor extends WorkerHost {
     if (this.enableRealTrading) {
       return this.executeRealOrder(order, market, logger);
     } else {
+      logger.log('Simulating order execution');
       return this.simulateExecution(order, market);
     }
   }
@@ -174,13 +175,16 @@ export class OrdersProcessor extends WorkerHost {
   }> {
     try {
       if (!market.conditionId) {
+        logger.warn(
+          `Market ${market.id} does not have a conditionId. The market may need to be synced from Polymarket.`,
+        );
         return {
           success: false,
-          reason: 'Market condition ID not found',
+          reason: 'Market condition ID not found. Please sync the market from Polymarket.',
         };
       }
 
-      logger.log('Executing real order on Polymarket');
+      logger.log(`Executing real order on Polymarket with conditionId: ${market.conditionId}`);
 
       const orderRequest: OrderRequest = {
         marketId: market.conditionId,
@@ -191,16 +195,47 @@ export class OrdersProcessor extends WorkerHost {
         price: order.price ?? undefined,
       };
 
-      const result = await this.marketProvider.placeOrder!(orderRequest);
+      if (order.userWalletAddress) {
+        logger.log(`Order has user wallet: ${order.userWalletAddress}`);
+        orderRequest.walletContext = {
+          walletAddress: order.userWalletAddress,
+          signature: '',
+          nonce: '',
+          message: '',
+        };
+      }
 
-      logger.log(`Real order placed with external ID: ${result.orderId}`);
+      try {
+        const result = await this.marketProvider.placeOrder!(orderRequest);
 
-      return {
-        success: result.status === 'FILLED' || result.status === 'PENDING',
-        fillPrice: result.averagePrice || order.price || '0',
-        externalOrderId: result.orderId,
-        reason: result.message,
-      };
+        logger.log(`Real order placed with external ID: ${result.orderId}`);
+
+        return {
+          success: result.status === 'FILLED' || result.status === 'PENDING',
+          fillPrice: result.averagePrice || order.price || '0',
+          externalOrderId: result.orderId,
+          reason: result.message,
+        };
+      } catch (placeOrderError) {
+        const errorMessage = (placeOrderError as Error).message;
+
+        if (
+          errorMessage.includes('Market not found') ||
+          errorMessage.includes('404') ||
+          errorMessage.includes('invalid')
+        ) {
+          logger.warn(
+            `Market conditionId ${market.conditionId} is invalid. The market may need to be re-synced from Polymarket. ` +
+              `Market ID: ${market.id}, External ID: ${market.externalId}`,
+          );
+          return {
+            success: false,
+            reason: `Market conditionId is invalid or the market has been removed from Polymarket. Please re-sync the market (ID: ${market.id}) from Polymarket to update the conditionId.`,
+          };
+        }
+
+        throw placeOrderError;
+      }
     } catch (error) {
       logger.error(`Real order execution failed: ${(error as Error).message}`);
       return {

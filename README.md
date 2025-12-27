@@ -32,6 +32,30 @@ Polymarket Trading Service - A NestJS-based application for integrating with Pol
 - Idempotent order creation and cancellation
 - Transactional safety and optimistic locking
 - Comprehensive test coverage (unit and e2e)
+- Real-time WebSocket integration for live market updates
+
+## Test Coverage
+
+![Coverage - Statements](https://img.shields.io/badge/statements-83.29%25-yellow.svg)
+![Coverage - Branches](https://img.shields.io/badge/branches-67.85%25-red.svg)
+![Coverage - Functions](https://img.shields.io/badge/functions-88.14%25-yellow.svg)
+![Coverage - Lines](https://img.shields.io/badge/lines-82.94%25-yellow.svg)
+
+Current test coverage metrics:
+- **Statements**: 83.29% (342 tests passing across 35 test suites)
+- **Branches**: 67.85%
+- **Functions**: 88.14%
+- **Lines**: 82.94%
+
+**Key Coverage Highlights:**
+- 100% coverage: `message-utils`, `signature-validation.service`, `token.repository`, `common/utils`, `common/services`
+- 95%+ coverage: `database/repositories` (95.49%)
+- 91%+ coverage: `market-update-handler.service` (91.77%)
+- 88%+ coverage: `polymarket-websocket.service` (88.19%)
+
+To view the detailed HTML coverage report:
+1. Run `pnpm test:cov` to generate the coverage report
+2. Open `coverage/lcov-report/index.html` in your browser
 
 ## Project setup
 
@@ -88,9 +112,11 @@ $ pnpm run test:watch
 # e2e tests
 $ pnpm run test:e2e
 
-# test coverage
+# test coverage (generates HTML report in coverage/lcov-report/index.html)
 $ pnpm run test:cov
 ```
+
+After running `pnpm run test:cov`, you can view the detailed HTML coverage report by opening `coverage/lcov-report/index.html` in your browser.
 
 ## E2E Testing
 
@@ -112,8 +138,16 @@ $ pnpm run test:e2e -- events.e2e-spec.ts
 
 ### Test Coverage
 
-E2E tests cover:
+The project has **342 passing tests** across **35 test suites**, including:
 
+**Unit Tests:**
+- Service layer tests (events, markets, orders, sync)
+- Repository layer tests
+- Provider integration tests (Polymarket WebSocket, CLOB, HTTP)
+- Utility and factory tests
+- Interceptor and filter tests
+
+**E2E Tests cover:**
 - **Events API**: GET /events, GET /events/:id, POST /events/sync
 - **Markets API**: GET /markets, GET /markets/:id with various filters
 - **Orders API**: POST /orders (with idempotency), GET /orders, GET /orders/:id, DELETE /orders/:id

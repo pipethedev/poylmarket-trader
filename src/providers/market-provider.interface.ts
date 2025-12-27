@@ -9,6 +9,7 @@ import type {
   CancelResult,
   OrderStatus,
   MarketProvider,
+  WalletContext,
 } from '../types';
 
 export type { MarketProvider as IMarketProvider };
@@ -23,6 +24,7 @@ export type {
   OrderResult,
   CancelResult,
   OrderStatus,
+  WalletContext,
 };
 
 export const MARKET_PROVIDER = Symbol('MARKET_PROVIDER');

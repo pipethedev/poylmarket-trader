@@ -1,6 +1,7 @@
-import { Injectable, Inject } from '@nestjs/common';
+import { Injectable, Inject, Optional } from '@nestjs/common';
 import { DataSource } from 'typeorm';
-import { MarketRepository, TokenRepository } from '@database/repositories/index';
+import { ConfigService } from '@nestjs/config';
+import { MarketRepository, EventRepository } from '@database/repositories/index';
 import { Event } from '@database/entities/event.entity';
 import { Market } from '@database/entities/market.entity';
 import { Token, TokenOutcome } from '@database/entities/token.entity';
@@ -8,6 +9,7 @@ import { MARKET_PROVIDER } from '@providers/market-provider.interface';
 import { AppLogger, LogPrefix } from '@common/logger/index';
 import { EventFactory, MarketFactory, TokenFactory } from '@common/factories/index';
 import type { MarketProvider, ProviderEvent, ProviderMarket, SyncResult } from '@app-types/index';
+import { PolymarketWebSocketService } from '@providers/polymarket/polymarket-websocket.service';
 
 export type { SyncResult };
 
@@ -19,11 +21,16 @@ export class SyncService {
     @Inject(MARKET_PROVIDER)
     private readonly marketProvider: MarketProvider,
     private readonly marketRepository: MarketRepository,
-    private readonly tokenRepository: TokenRepository,
+    private readonly eventRepository: EventRepository,
     private readonly dataSource: DataSource,
-    logger: AppLogger,
+    private readonly configService: ConfigService,
+    @Optional()
+    private readonly wsService?: PolymarketWebSocketService,
+    logger?: AppLogger,
   ) {
-    this.logger = logger.setPrefix(LogPrefix.SYNC).setContext(SyncService.name);
+    this.logger = (logger || new AppLogger())
+      .setPrefix(LogPrefix.SYNC)
+      .setContext(SyncService.name);
   }
 
   async syncEvents(limit = 100): Promise<SyncResult> {
@@ -40,11 +47,23 @@ export class SyncService {
     try {
       this.logger.log(`Starting event sync (limit: ${limit})`);
 
+      const syncDaysBack = this.configService.get<number>('scheduler.syncDaysBack') ?? 60;
+
+      const dateThreshold = new Date();
+
+      dateThreshold.setDate(dateThreshold.getDate() - syncDaysBack);
+
+      const startDateMin = dateThreshold.toISOString();
+
+      this.logger.log(`Filtering events from past ${syncDaysBack} days (since ${startDateMin})`);
+
       const providerEvents = await this.marketProvider.getEvents({
         limit,
-        active: true,
+        featured: true,
+        startDateMin,
       });
-      this.logger.log(`Fetched ${providerEvents.length} events from provider`);
+
+      this.logger.log(`Fetched ${providerEvents.length} events from provider (past month)`);
 
       for (const providerEvent of providerEvents) {
         try {
@@ -70,6 +89,8 @@ export class SyncService {
           result.errors.push(errorMsg);
         }
       }
+
+      await this.updateAllEventStatuses();
 
       this.logger.log(
         `Sync completed - Events: ${result.eventsCreated} created, ${result.eventsUpdated} updated | Markets: ${result.marketsCreated} created, ${result.marketsUpdated} updated`,
@@ -201,6 +222,8 @@ export class SyncService {
 
       market = await queryRunner.manager.save(Market, market);
 
+      const tokenIds: string[] = [];
+
       for (const providerToken of providerMarket.tokens) {
         let token: Token | null = await queryRunner.manager.findOne(Token, {
           where: { tokenId: providerToken.tokenId },
@@ -215,9 +238,23 @@ export class SyncService {
         }
 
         await queryRunner.manager.save(Token, token);
+        tokenIds.push(token.tokenId);
       }
 
       await queryRunner.commitTransaction();
+
+      if (created && tokenIds.length > 0 && this.wsService && market.active && !market.closed) {
+        try {
+          await this.wsService.subscribeToTokenIds(tokenIds);
+          this.logger.log(`Subscribed to ${tokenIds.length} token IDs for market ${market.id}`);
+        } catch (error) {
+          this.logger.warn(
+            `Failed to subscribe to token IDs for market ${market.id}: ${(error as Error).message}`,
+          );
+        }
+      }
+
+      await this.updateEventStatusIfAllMarketsClosed(localEventId);
 
       return { market, created, tokensCreated, tokensUpdated };
     } catch (error) {
@@ -237,36 +274,58 @@ export class SyncService {
       const activeMarkets = await this.marketRepository.findActiveMarketsWithPriceInfo();
 
       for (const market of activeMarkets) {
+        const queryRunner = this.dataSource.createQueryRunner();
+        await queryRunner.connect();
+        await queryRunner.startTransaction();
+
         try {
+          const lockedMarket = await queryRunner.manager.findOne(Market, {
+            where: { id: market.id },
+            lock: { mode: 'pessimistic_write' },
+          });
+
+          if (!lockedMarket) {
+            await queryRunner.rollbackTransaction();
+            continue;
+          }
+
           const marketId = market.conditionId || market.externalId;
           const price = await this.marketProvider.getMarketPrice(marketId);
 
           if (!price) {
+            await queryRunner.rollbackTransaction();
             continue;
           }
 
-          await Promise.all([
-            this.marketRepository.update(market.id, {
-              outcomeYesPrice: price.yesPrice,
-              outcomeNoPrice: price.noPrice,
-            }),
-            this.tokenRepository.updatePriceByMarketIdAndOutcome(
-              market.id,
-              TokenOutcome.YES,
-              price.yesPrice,
-            ),
-            this.tokenRepository.updatePriceByMarketIdAndOutcome(
-              market.id,
-              TokenOutcome.NO,
-              price.noPrice,
-            ),
-          ]);
+          const tokens = await queryRunner.manager.find(Token, {
+            where: { marketId: market.id },
+            lock: { mode: 'pessimistic_write' },
+          });
 
+          await queryRunner.manager.update(Market, market.id, {
+            outcomeYesPrice: price.yesPrice,
+            outcomeNoPrice: price.noPrice,
+          });
+
+          const yesToken = tokens.find((t) => t.outcome === TokenOutcome.YES);
+          const noToken = tokens.find((t) => t.outcome === TokenOutcome.NO);
+
+          if (yesToken) {
+            await queryRunner.manager.update(Token, yesToken.id, { price: price.yesPrice });
+          }
+          if (noToken) {
+            await queryRunner.manager.update(Token, noToken.id, { price: price.noPrice });
+          }
+
+          await queryRunner.commitTransaction();
           result.updated++;
         } catch (error) {
+          await queryRunner.rollbackTransaction();
           result.errors.push(
             `Failed to update price for market ${market.id}: ${(error as Error).message}`,
           );
+        } finally {
+          await queryRunner.release();
         }
       }
 
@@ -276,5 +335,78 @@ export class SyncService {
     }
 
     return result;
+  }
+
+  private async updateEventStatusIfAllMarketsClosed(eventId: number): Promise<void> {
+    try {
+      const markets = await this.marketRepository.findByEventId(eventId);
+
+      if (markets.length === 0) {
+        return;
+      }
+
+      const hasActiveMarkets = markets.some((market) => market.active && !market.closed);
+      const allMarketsClosed = markets.every((market) => market.closed);
+
+      if (hasActiveMarkets) {
+        const event = await this.eventRepository.findOneBy({ id: eventId });
+        if (event && !event.active) {
+          await this.eventRepository.update(eventId, { active: true });
+          this.logger.log(
+            `Marked event ${eventId} as active (has ${markets.filter((m) => m.active && !m.closed).length} active markets)`,
+          );
+        }
+      } else if (allMarketsClosed) {
+        await this.eventRepository.update(eventId, { active: false });
+        this.logger.log(
+          `Marked event ${eventId} as inactive (all ${markets.length} markets closed)`,
+        );
+      } else {
+        const event = await this.eventRepository.findOneBy({ id: eventId });
+        if (event && event.active) {
+          await this.eventRepository.update(eventId, { active: false });
+          this.logger.log(`Marked event ${eventId} as inactive (no active markets)`);
+        }
+      }
+    } catch (error) {
+      this.logger.warn(
+        `Failed to update event status for event ${eventId}: ${(error as Error).message}`,
+      );
+    }
+  }
+
+  private async updateAllEventStatuses(): Promise<void> {
+    try {
+      this.logger.log('Updating event statuses based on market statuses');
+
+      const allEvents = await this.eventRepository.findMany({});
+      let updatedCount = 0;
+
+      for (const event of allEvents) {
+        const markets = await this.marketRepository.findByEventId(event.id);
+
+        if (markets.length === 0) {
+          continue;
+        }
+
+        const hasActiveMarkets = markets.some((market) => market.active && !market.closed);
+
+        if (hasActiveMarkets && !event.active) {
+          await this.eventRepository.update(event.id, { active: true });
+          updatedCount++;
+          this.logger.debug(`Marked event ${event.id} as active (has active markets)`);
+        } else if (!hasActiveMarkets && event.active) {
+          await this.eventRepository.update(event.id, { active: false });
+          updatedCount++;
+          this.logger.debug(`Marked event ${event.id} as inactive (no active markets)`);
+        }
+      }
+
+      if (updatedCount > 0) {
+        this.logger.log(`Updated status for ${updatedCount} events`);
+      }
+    } catch (error) {
+      this.logger.warn(`Failed to update all event statuses: ${(error as Error).message}`);
+    }
   }
 }

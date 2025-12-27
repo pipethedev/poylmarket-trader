@@ -142,6 +142,7 @@ describe('EventsService', () => {
       const mockQueryBuilder = {
         andWhere: jest.fn().mockReturnThis(),
         orderBy: jest.fn().mockReturnThis(),
+        addOrderBy: jest.fn().mockReturnThis(),
       };
       eventRepository.createQueryBuilder.mockReturnValue(mockQueryBuilder as never);
       eventRepository.paginate.mockResolvedValue({
@@ -161,6 +162,7 @@ describe('EventsService', () => {
       const mockQueryBuilder = {
         andWhere: jest.fn().mockReturnThis(),
         orderBy: jest.fn().mockReturnThis(),
+        addOrderBy: jest.fn().mockReturnThis(),
       };
       eventRepository.createQueryBuilder.mockReturnValue(mockQueryBuilder as never);
       eventRepository.paginate.mockResolvedValue({
@@ -180,6 +182,7 @@ describe('EventsService', () => {
       const mockQueryBuilder = {
         andWhere: jest.fn().mockReturnThis(),
         orderBy: jest.fn().mockReturnThis(),
+        addOrderBy: jest.fn().mockReturnThis(),
       };
       eventRepository.createQueryBuilder.mockReturnValue(mockQueryBuilder as never);
       eventRepository.paginate.mockResolvedValue({
@@ -229,10 +232,7 @@ describe('EventsService', () => {
       const result = await service.syncEvents(100);
 
       expect(result).toEqual({
-        jobId: 'job-123',
         message: 'Sync job has been queued and will be processed in the background',
-        syncedEvents: 0,
-        syncedMarkets: 0,
       });
       expect(syncQueue.add).toHaveBeenCalledWith(
         'sync-events',

@@ -92,6 +92,32 @@ export class CreateOrderDto {
   price?: string;
 
   @ApiPropertyOptional({
+    description: 'Wallet address of the user placing the order',
+    example: '0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb',
+  })
+  @IsOptional()
+  @ValidateIf((o: CreateOrderDto) => o.walletAddress !== undefined)
+  walletAddress?: string;
+
+  @ApiPropertyOptional({
+    description: 'Signature of the order message (required if walletAddress is provided)',
+    example: '0x...',
+  })
+  @IsOptional()
+  @ValidateIf((o: CreateOrderDto) => o.walletAddress !== undefined)
+  @IsNotEmpty({ message: 'Signature is required when walletAddress is provided' })
+  signature?: string;
+
+  @ApiPropertyOptional({
+    description: 'Nonce used for message signing (required if walletAddress is provided)',
+    example: '1234567890',
+  })
+  @IsOptional()
+  @ValidateIf((o: CreateOrderDto) => o.walletAddress !== undefined)
+  @IsNotEmpty({ message: 'Nonce is required when walletAddress is provided' })
+  nonce?: string;
+
+  @ApiPropertyOptional({
     description: 'Additional metadata for the order',
   })
   @IsOptional()

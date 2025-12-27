@@ -10,6 +10,7 @@ export class MarketFactory {
       conditionId: data.conditionId ?? null,
       question: data.question,
       description: data.description ?? null,
+      image: data.image ?? null,
       outcomeYesPrice: data.outcomeYesPrice,
       outcomeNoPrice: data.outcomeNoPrice,
       volume: data.volume ?? null,
@@ -23,6 +24,7 @@ export class MarketFactory {
   static update(entity: Market, data: ProviderMarket): Market {
     entity.question = data.question;
     entity.description = data.description ?? null;
+    entity.image = data.image ?? null;
     entity.conditionId = data.conditionId ?? null;
     entity.outcomeYesPrice = data.outcomeYesPrice;
     entity.outcomeNoPrice = data.outcomeNoPrice;

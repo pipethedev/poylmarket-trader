@@ -25,11 +25,24 @@ export type PolymarketConfig = {
   signatureType?: number;
   chainId?: number;
   enableRealTrading?: boolean;
+  rpcUrl?: string;
+  clobWebSocketUrl?: string;
+  websocketEnabled?: boolean;
+  websocketReconnectDelay?: number;
+  websocketCustomFeaturesEnabled?: boolean;
 };
 
 export type SchedulerConfig = {
   syncCron: string;
   priceUpdateCron: string;
+  syncDaysBack: number;
+};
+
+export type CorsConfig = {
+  origins: string[];
+  methods: string[];
+  allowedHeaders: string[];
+  credentials: boolean;
 };
 
 export type AppConfig = {
@@ -39,4 +52,5 @@ export type AppConfig = {
   redis: RedisConfig;
   polymarket: PolymarketConfig;
   scheduler: SchedulerConfig;
+  cors: CorsConfig;
 };

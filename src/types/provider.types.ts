@@ -3,6 +3,12 @@ export type EventQueryParams = {
   offset?: number;
   active?: boolean;
   slug?: string;
+  closed?: boolean;
+  featured?: boolean;
+  startDateMin?: string;
+  startDateMax?: string;
+  endDateMin?: string;
+  endDateMax?: string;
 };
 
 export type MarketQueryParams = {
@@ -16,6 +22,7 @@ export type ProviderEvent = {
   title: string;
   description?: string;
   slug?: string;
+  image?: string;
   startDate?: Date;
   endDate?: Date;
   active: boolean;
@@ -28,6 +35,7 @@ export type ProviderMarket = {
   conditionId?: string;
   question: string;
   description?: string;
+  image?: string;
   outcomeYesPrice: string;
   outcomeNoPrice: string;
   volume?: string;
@@ -51,6 +59,13 @@ export type MarketPrice = {
   timestamp: Date;
 };
 
+export type WalletContext = {
+  walletAddress: string;
+  signature: string;
+  nonce: string;
+  message: string;
+};
+
 export type OrderRequest = {
   marketId: string;
   side: 'BUY' | 'SELL';
@@ -58,6 +73,7 @@ export type OrderRequest = {
   outcome: 'YES' | 'NO';
   quantity: string;
   price?: string;
+  walletContext?: WalletContext;
 };
 
 export type OrderResult = {

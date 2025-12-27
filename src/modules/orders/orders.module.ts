@@ -10,8 +10,13 @@ import { ProvidersModule } from '@providers/providers.module';
     BullModule.registerQueue({
       name: 'orders',
       defaultJobOptions: {
-        removeOnComplete: true,
-        removeOnFail: false,
+        removeOnComplete: {
+          age: 3600,
+          count: 1000,
+        },
+        removeOnFail: {
+          age: 86400,
+        },
         attempts: 3,
         backoff: {
           type: 'exponential',

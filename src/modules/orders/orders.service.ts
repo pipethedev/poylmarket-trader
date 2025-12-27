@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Optional } from '@nestjs/common';
 import { InjectQueue } from '@nestjs/bullmq';
 import { DataSource } from 'typeorm';
 import { Queue } from 'bullmq';
@@ -13,11 +13,15 @@ import {
   MarketNotFoundException,
   MarketNotActiveException,
   OptimisticLockException,
+  InvalidSignatureException,
 } from '@common/exceptions/index';
 import { CreateOrderDto } from './dto/create-order.dto';
 import { QueryOrdersDto } from './dto/query-orders.dto';
 import { OrderResponseDto, OrderListResponseDto } from './dto/order-response.dto';
 import type { OrderJobData } from '@app-types/index';
+import { PolymarketClobService } from '@providers/polymarket/polymarket-clob.service';
+import { SignatureValidationService } from '@common/services/signature-validation.service';
+import { createOrderMessage } from '@common/utils/message-utils';
 
 export type { OrderJobData };
 
@@ -30,9 +34,14 @@ export class OrdersService {
     @InjectQueue('orders')
     private readonly ordersQueue: Queue<OrderJobData>,
     private readonly dataSource: DataSource,
-    logger: AppLogger,
+    private readonly signatureValidationService: SignatureValidationService,
+    @Optional()
+    private readonly clobService?: PolymarketClobService,
+    logger?: AppLogger,
   ) {
-    this.logger = logger.setPrefix(LogPrefix.ORDER).setContext(OrdersService.name);
+    this.logger = (logger || new AppLogger())
+      .setPrefix(LogPrefix.ORDER)
+      .setContext(OrdersService.name);
   }
 
   async createOrder(dto: CreateOrderDto, idempotencyKey: string): Promise<OrderResponseDto> {
@@ -60,7 +69,34 @@ export class OrdersService {
         throw new MarketNotActiveException(String(dto.marketId));
       }
 
-      const order = queryRunner.manager.create(Order, OrderFactory.create({ dto, idempotencyKey }));
+      let userWalletAddress: string | null = null;
+      if (dto.walletAddress) {
+        if (!dto.signature || !dto.nonce) {
+          throw new InvalidSignatureException(
+            'Signature and nonce are required when wallet address is provided',
+          );
+        }
+
+        const message = createOrderMessage(dto, dto.nonce);
+        const isValid = this.signatureValidationService.verifyMessage(
+          message,
+          dto.signature,
+          dto.walletAddress,
+        );
+
+        if (!isValid) {
+          this.logger.warn(`Invalid signature for wallet ${dto.walletAddress}`);
+          throw new InvalidSignatureException();
+        }
+
+        userWalletAddress = dto.walletAddress;
+        this.logger.log(`Wallet signature validated for ${dto.walletAddress}`);
+      }
+
+      const order = queryRunner.manager.create(
+        Order,
+        OrderFactory.create({ dto, idempotencyKey, userWalletAddress }),
+      );
 
       const savedOrder = await queryRunner.manager.save(Order, order);
       await queryRunner.commitTransaction();
@@ -120,9 +156,28 @@ export class OrdersService {
 
     this.logger.log(`Found ${result.meta.total} orders`);
 
+    let stats;
+    if (this.clobService?.isRealTradingEnabled() && this.clobService?.isServerWalletConfigured()) {
+      try {
+        const [openOrders, trades] = await Promise.all([
+          this.clobService.getOpenOrders(),
+          this.clobService.getTrades(),
+        ]);
+
+        stats = {
+          totalOrders: result.meta.total,
+          openOrders: openOrders.length,
+          trades: trades.length,
+        };
+      } catch (error) {
+        this.logger.warn(`Failed to fetch CLOB stats: ${(error as Error).message}`);
+      }
+    }
+
     return {
       data: result.data.map((order) => OrderFactory.toResponse(order)),
       meta: result.meta,
+      stats,
     };
   }
 
@@ -230,13 +285,19 @@ export class OrdersService {
       'process-order',
       { orderId, attempt: 1 },
       {
+        priority: 10,
         attempts: 3,
         backoff: {
           type: 'exponential',
           delay: 1000,
         },
-        removeOnComplete: true,
-        removeOnFail: false,
+        removeOnComplete: {
+          age: 3600,
+          count: 1000,
+        },
+        removeOnFail: {
+          age: 86400,
+        },
       },
     );
 

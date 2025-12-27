@@ -143,6 +143,7 @@ describe('MarketsService', () => {
       const mockQueryBuilder = {
         andWhere: jest.fn().mockReturnThis(),
         orderBy: jest.fn().mockReturnThis(),
+        addOrderBy: jest.fn().mockReturnThis(),
       };
       marketRepository.createQueryBuilder.mockReturnValue(mockQueryBuilder as never);
       marketRepository.paginate.mockResolvedValue({
@@ -161,6 +162,7 @@ describe('MarketsService', () => {
       const mockQueryBuilder = {
         andWhere: jest.fn().mockReturnThis(),
         orderBy: jest.fn().mockReturnThis(),
+        addOrderBy: jest.fn().mockReturnThis(),
       };
       marketRepository.createQueryBuilder.mockReturnValue(mockQueryBuilder as never);
       marketRepository.paginate.mockResolvedValue({
@@ -180,6 +182,7 @@ describe('MarketsService', () => {
       const mockQueryBuilder = {
         andWhere: jest.fn().mockReturnThis(),
         orderBy: jest.fn().mockReturnThis(),
+        addOrderBy: jest.fn().mockReturnThis(),
       };
       marketRepository.createQueryBuilder.mockReturnValue(mockQueryBuilder as never);
       marketRepository.paginate.mockResolvedValue({
@@ -199,6 +202,7 @@ describe('MarketsService', () => {
       const mockQueryBuilder = {
         andWhere: jest.fn().mockReturnThis(),
         orderBy: jest.fn().mockReturnThis(),
+        addOrderBy: jest.fn().mockReturnThis(),
       };
       marketRepository.createQueryBuilder.mockReturnValue(mockQueryBuilder as never);
       marketRepository.paginate.mockResolvedValue({
@@ -211,6 +215,111 @@ describe('MarketsService', () => {
 
       expect(mockQueryBuilder.andWhere).toHaveBeenCalledWith('market.question ILIKE :search', {
         search: '%test%',
+      });
+    });
+
+    it('should filter by closed status', async () => {
+      const mockQueryBuilder = {
+        andWhere: jest.fn().mockReturnThis(),
+        orderBy: jest.fn().mockReturnThis(),
+        addOrderBy: jest.fn().mockReturnThis(),
+      };
+      marketRepository.createQueryBuilder.mockReturnValue(mockQueryBuilder as never);
+      marketRepository.paginate.mockResolvedValue({
+        data: [],
+        meta: { currentPage: 1, perPage: 20, total: 0, totalPages: 0 },
+      });
+      tokenRepository.findByMarketIds.mockResolvedValue([]);
+
+      await service.getMarkets({ closed: false });
+
+      expect(mockQueryBuilder.andWhere).toHaveBeenCalledWith('market.closed = :closed', {
+        closed: false,
+      });
+    });
+
+    it('should filter by volume range', async () => {
+      const mockQueryBuilder = {
+        andWhere: jest.fn().mockReturnThis(),
+        orderBy: jest.fn().mockReturnThis(),
+        addOrderBy: jest.fn().mockReturnThis(),
+      };
+      marketRepository.createQueryBuilder.mockReturnValue(mockQueryBuilder as never);
+      marketRepository.paginate.mockResolvedValue({
+        data: [],
+        meta: { currentPage: 1, perPage: 20, total: 0, totalPages: 0 },
+      });
+      tokenRepository.findByMarketIds.mockResolvedValue([]);
+
+      await service.getMarkets({ volumeMin: 1000, volumeMax: 50000 });
+
+      expect(mockQueryBuilder.andWhere).toHaveBeenCalledWith('market.volume >= :volumeMin', {
+        volumeMin: '1000',
+      });
+      expect(mockQueryBuilder.andWhere).toHaveBeenCalledWith('market.volume <= :volumeMax', {
+        volumeMax: '50000',
+      });
+    });
+
+    it('should filter by liquidity range', async () => {
+      const mockQueryBuilder = {
+        andWhere: jest.fn().mockReturnThis(),
+        orderBy: jest.fn().mockReturnThis(),
+        addOrderBy: jest.fn().mockReturnThis(),
+      };
+      marketRepository.createQueryBuilder.mockReturnValue(mockQueryBuilder as never);
+      marketRepository.paginate.mockResolvedValue({
+        data: [],
+        meta: { currentPage: 1, perPage: 20, total: 0, totalPages: 0 },
+      });
+      tokenRepository.findByMarketIds.mockResolvedValue([]);
+
+      await service.getMarkets({ liquidityMin: 500, liquidityMax: 10000 });
+
+      expect(mockQueryBuilder.andWhere).toHaveBeenCalledWith('market.liquidity >= :liquidityMin', {
+        liquidityMin: '500',
+      });
+      expect(mockQueryBuilder.andWhere).toHaveBeenCalledWith('market.liquidity <= :liquidityMax', {
+        liquidityMax: '10000',
+      });
+    });
+
+    it('should filter by date ranges', async () => {
+      const mockQueryBuilder = {
+        andWhere: jest.fn().mockReturnThis(),
+        orderBy: jest.fn().mockReturnThis(),
+        addOrderBy: jest.fn().mockReturnThis(),
+      };
+      marketRepository.createQueryBuilder.mockReturnValue(mockQueryBuilder as never);
+      marketRepository.paginate.mockResolvedValue({
+        data: [],
+        meta: { currentPage: 1, perPage: 20, total: 0, totalPages: 0 },
+      });
+      tokenRepository.findByMarketIds.mockResolvedValue([]);
+
+      const createdAtMin = '2024-01-01';
+      const createdAtMax = '2024-12-31';
+      const updatedAtMin = '2024-06-01';
+      const updatedAtMax = '2024-12-31';
+
+      await service.getMarkets({
+        createdAtMin,
+        createdAtMax,
+        updatedAtMin,
+        updatedAtMax,
+      });
+
+      expect(mockQueryBuilder.andWhere).toHaveBeenCalledWith('market.created_at >= :createdAtMin', {
+        createdAtMin,
+      });
+      expect(mockQueryBuilder.andWhere).toHaveBeenCalledWith('market.created_at <= :createdAtMax', {
+        createdAtMax,
+      });
+      expect(mockQueryBuilder.andWhere).toHaveBeenCalledWith('market.updated_at >= :updatedAtMin', {
+        updatedAtMin,
+      });
+      expect(mockQueryBuilder.andWhere).toHaveBeenCalledWith('market.updated_at <= :updatedAtMax', {
+        updatedAtMax,
       });
     });
   });

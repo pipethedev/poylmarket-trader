@@ -88,6 +88,12 @@ export class OrderResponseDto {
   })
   failureReason?: string | null;
 
+  @ApiPropertyOptional({
+    description: 'Wallet address of the user who placed the order',
+    example: '0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb',
+  })
+  userWalletAddress?: string | null;
+
   @ApiProperty({
     description: 'Order creation timestamp',
     example: '2024-01-15T10:30:00.000Z',
@@ -99,6 +105,26 @@ export class OrderResponseDto {
     example: '2024-01-15T10:30:00.000Z',
   })
   updatedAt: Date;
+}
+
+export class OrderStatsDto {
+  @ApiProperty({
+    description: 'Total number of orders in the database',
+    example: 150,
+  })
+  totalOrders: number;
+
+  @ApiProperty({
+    description: 'Number of open orders on CLOB (requires real trading)',
+    example: 5,
+  })
+  openOrders: number;
+
+  @ApiProperty({
+    description: 'Number of trades executed (requires real trading)',
+    example: 45,
+  })
+  trades: number;
 }
 
 export class OrderListResponseDto {
@@ -113,4 +139,10 @@ export class OrderListResponseDto {
     type: PaginationMetaDto,
   })
   meta: PaginationMetaDto;
+
+  @ApiPropertyOptional({
+    description: 'Order statistics (only available when real trading is enabled)',
+    type: OrderStatsDto,
+  })
+  stats?: OrderStatsDto;
 }

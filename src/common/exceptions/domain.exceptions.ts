@@ -131,3 +131,9 @@ export class OptimisticLockException extends AppException {
     );
   }
 }
+
+export class InvalidSignatureException extends AppException {
+  constructor(message = 'Invalid signature: signature does not match wallet address') {
+    super('INVALID_SIGNATURE', message, HttpStatus.BAD_REQUEST);
+  }
+}

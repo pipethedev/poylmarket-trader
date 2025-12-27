@@ -44,6 +44,11 @@ export class PolymarketProvider implements MarketProvider {
           limit: params?.limit,
           offset: params?.offset,
           active: params?.active,
+          closed: params?.closed,
+          start_date_min: params?.startDateMin,
+          start_date_max: params?.startDateMax,
+          end_date_min: params?.endDateMin,
+          end_date_max: params?.endDateMax,
         },
       });
 
@@ -125,7 +130,23 @@ export class PolymarketProvider implements MarketProvider {
         .setContextData({ marketId: order.marketId })
         .log(`Placing ${order.side} order for ${order.outcome} outcome`);
 
-      const market = (await this.clob.getMarket(order.marketId)) as ClobMarketData;
+      let market: ClobMarketData;
+      try {
+        market = (await this.clob.getMarket(order.marketId)) as ClobMarketData;
+      } catch (error) {
+        if (
+          error instanceof Error &&
+          (error.message.includes('404') || error.message.includes('not found'))
+        ) {
+          this.logger.error(
+            `Market with conditionId ${order.marketId} not found on Polymarket CLOB. The market may have been removed or the conditionId is invalid.`,
+          );
+          throw new Error(
+            `Market not found on Polymarket. The conditionId "${order.marketId}" may be invalid or the market may have been removed. Please sync the market from Polymarket.`,
+          );
+        }
+        throw error;
+      }
 
       if (!market) {
         throw new Error(`Market ${order.marketId} not found`);
@@ -150,6 +171,10 @@ export class PolymarketProvider implements MarketProvider {
         orderPrice = parseFloat(order.price);
       }
 
+      const walletContext = order.walletContext;
+
+      const useUserWallet = !!walletContext?.walletAddress;
+
       const response = await this.clob.placeOrder({
         tokenId: token.token_id,
         price: orderPrice,
@@ -157,6 +182,7 @@ export class PolymarketProvider implements MarketProvider {
         size: parseFloat(order.quantity),
         tickSize: tickSizeData,
         negRisk: market.neg_risk ?? false,
+        walletContext: useUserWallet ? walletContext : undefined,
       });
 
       this.logger.log(`Order placed successfully with ID: ${response.orderID}`);
@@ -179,6 +205,7 @@ export class PolymarketProvider implements MarketProvider {
       title: event.title,
       description: event.description,
       slug: event.slug,
+      image: event.image || event.icon || undefined,
       startDate: event.startDate ? new Date(event.startDate) : undefined,
       endDate: event.endDate ? new Date(event.endDate) : undefined,
       active: event.active && !event.closed && !event.archived,
@@ -216,6 +243,7 @@ export class PolymarketProvider implements MarketProvider {
       conditionId: market.conditionId,
       question: market.question,
       description: undefined,
+      image: market.image || market.icon || undefined,
       outcomeYesPrice: outcomePrices[0] || '0',
       outcomeNoPrice: outcomePrices[1] || '0',
       volume: market.volume,
@@ -257,6 +285,7 @@ export class PolymarketProvider implements MarketProvider {
       conditionId: market.condition_id,
       question: market.question,
       description: market.description,
+      image: market.image || market.icon || undefined,
       outcomeYesPrice: yesToken?.price?.toString() || '0',
       outcomeNoPrice: noToken?.price?.toString() || '0',
       volume: undefined,
@@ -329,6 +358,8 @@ interface ClobMarketData {
   condition_id: string;
   question: string;
   description?: string;
+  image?: string;
+  icon?: string;
   active: boolean;
   closed: boolean;
   category?: string;

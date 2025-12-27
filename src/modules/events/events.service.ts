@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Inject, Optional } from '@nestjs/common';
 import { InjectQueue } from '@nestjs/bullmq';
 import { Queue } from 'bullmq';
 import { EventRepository, MarketRepository, TokenRepository } from '@database/repositories/index';
@@ -15,6 +15,9 @@ import {
   MarketSummaryDto,
 } from './dto/event-response.dto';
 import type { SyncJobData } from '@modules/sync/sync.processor';
+import { MARKET_PROVIDER } from '@providers/market-provider.interface';
+import type { MarketProvider } from '@app-types/index';
+import { SyncService } from '@modules/sync/sync.service';
 
 @Injectable()
 export class EventsService {
@@ -26,9 +29,16 @@ export class EventsService {
     private readonly tokenRepository: TokenRepository,
     @InjectQueue('sync')
     private readonly syncQueue: Queue<SyncJobData>,
-    logger: AppLogger,
+    @Inject(MARKET_PROVIDER)
+    @Optional()
+    private readonly marketProvider?: MarketProvider,
+    @Optional()
+    private readonly syncService?: SyncService,
+    logger?: AppLogger,
   ) {
-    this.logger = logger.setPrefix(LogPrefix.API).setContext(EventsService.name);
+    this.logger = (logger || new AppLogger())
+      .setPrefix(LogPrefix.API)
+      .setContext(EventsService.name);
   }
 
   async getEvents(query: QueryEventsDto): Promise<EventListResponseDto> {
@@ -40,11 +50,16 @@ export class EventsService {
       qb.andWhere('event.active = :active', { active: query.active });
     }
 
+    if (query.featured !== undefined) {
+      qb.andWhere('event.featured = :featured', { featured: query.featured });
+    }
+
     if (query.search) {
       qb.andWhere('event.title ILIKE :search', { search: `%${query.search}%` });
     }
 
-    qb.orderBy('event.updatedAt', 'DESC');
+    qb.orderBy('event.active', 'DESC');
+    qb.addOrderBy('event.updatedAt', 'DESC');
 
     const result = await this.eventRepository.paginate(qb, {
       page: query.page ?? 1,
@@ -54,7 +69,64 @@ export class EventsService {
     const eventIds = result.data.map((e) => e.id);
     const marketCounts = await this.marketRepository.getMarketCountsByEventIds(eventIds);
 
-    this.logger.log(`Found ${result.meta.total} events`);
+    this.logger.log(`Found ${result.meta.total} events in database`);
+
+    // If no results found and there's a search query, try fetching from API
+    if (result.meta.total === 0 && query.search && this.marketProvider && this.syncService) {
+      this.logger.log(
+        `No events found in database for search "${query.search}", attempting API fallback`,
+      );
+
+      try {
+        const providerEvents = await this.marketProvider.getEvents({
+          limit: 50, // Reasonable limit for search
+        });
+
+        // Filter by search term (case-insensitive)
+        const matchingEvents = providerEvents.filter((event) =>
+          event.title.toLowerCase().includes(query.search!.toLowerCase()),
+        );
+
+        if (matchingEvents.length > 0) {
+          this.logger.log(`Found ${matchingEvents.length} matching events from API, syncing...`);
+
+          // Sync each matching event
+          for (const providerEvent of matchingEvents) {
+            try {
+              const eventResult = await this.syncService.syncEvent(providerEvent);
+              await this.syncService.syncMarketsForEvent(providerEvent.id, eventResult.event.id);
+            } catch (error) {
+              this.logger.warn(
+                `Failed to sync event ${providerEvent.id} from API: ${(error as Error).message}`,
+              );
+            }
+          }
+
+          // Re-query the database after syncing
+          const retryResult = await this.eventRepository.paginate(qb, {
+            page: query.page ?? 1,
+            size: query.limit ?? query.pageSize ?? 20,
+          });
+
+          const retryEventIds = retryResult.data.map((e) => e.id);
+          const retryMarketCounts =
+            await this.marketRepository.getMarketCountsByEventIds(retryEventIds);
+
+          this.logger.log(`After API sync, found ${retryResult.meta.total} events`);
+
+          return {
+            data: retryResult.data.map((event) => ({
+              ...this.mapToResponse(event),
+              marketCount: retryMarketCounts[event.id] || 0,
+            })),
+            meta: retryResult.meta,
+          };
+        }
+      } catch (error) {
+        this.logger.warn(`API fallback failed: ${(error as Error).message}`);
+        // Continue to return empty results if API call fails
+      }
+    }
 
     return {
       data: result.data.map((event) => ({
@@ -126,9 +198,7 @@ export class EventsService {
     return markets.map((market) => this.mapMarketToSummary(market));
   }
 
-  async syncEvents(
-    limit = 100,
-  ): Promise<{ jobId: string; message: string; syncedEvents: number; syncedMarkets: number }> {
+  async syncEvents(limit = 100): Promise<{ message: string }> {
     this.logger.log(`Queuing sync job with limit: ${limit}`);
 
     const job = await this.syncQueue.add(
@@ -151,10 +221,7 @@ export class EventsService {
     this.logger.log(`Sync job queued with ID: ${job.id}`);
 
     return {
-      jobId: job.id!,
       message: 'Sync job has been queued and will be processed in the background',
-      syncedEvents: 0,
-      syncedMarkets: 0,
     };
   }
 
@@ -165,9 +232,11 @@ export class EventsService {
       title: event.title,
       description: event.description,
       slug: event.slug,
+      image: event.image,
       startDate: event.startDate,
       endDate: event.endDate,
       active: event.active,
+      featured: event.featured,
       createdAt: event.createdAt,
       updatedAt: event.updatedAt,
     };

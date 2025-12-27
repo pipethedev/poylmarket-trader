@@ -1,9 +1,10 @@
 import { Test, TestingModule } from '@nestjs/testing';
+import { SignatureValidationService } from '@common/services/signature-validation.service';
 import { DataSource, QueryRunner } from 'typeorm';
 import { Queue } from 'bullmq';
 import { getQueueToken } from '@nestjs/bullmq';
 import { OrdersService } from './orders.service';
-import { OrderRepository } from '@database/repositories/order.repository';
+import { OrderRepository, MarketRepository } from '@database/repositories';
 import {
   Order,
   OrderStatus,
@@ -91,6 +92,7 @@ describe('OrdersService', () => {
         findOne: jest.fn(),
         create: jest.fn(),
         save: jest.fn(),
+        update: jest.fn(),
       } as any,
     } as unknown as jest.Mocked<QueryRunner>;
 
@@ -124,6 +126,18 @@ describe('OrdersService', () => {
         {
           provide: AppLogger,
           useValue: mockLogger,
+        },
+        {
+          provide: SignatureValidationService,
+          useValue: {
+            validateSignature: jest.fn(),
+          },
+        },
+        {
+          provide: MarketRepository,
+          useValue: {
+            findById: jest.fn(),
+          },
         },
       ],
     }).compile();

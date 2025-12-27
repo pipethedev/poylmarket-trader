@@ -43,6 +43,9 @@ export class Market {
   @Column({ type: 'text', nullable: true })
   description: string | null;
 
+  @Column({ type: 'varchar', length: 500, nullable: true })
+  image: string | null;
+
   @Column({
     name: 'outcome_yes_price',
     type: 'decimal',

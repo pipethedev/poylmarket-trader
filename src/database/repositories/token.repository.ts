@@ -39,4 +39,21 @@ export class TokenRepository extends BaseRepository<Token> {
   ): Promise<void> {
     await this.updateBy({ marketId, outcome }, { price });
   }
+
+  async findTokenIdsByMarketIds(marketIds: number[]): Promise<Map<number, string[]>> {
+    if (marketIds.length === 0) return new Map();
+
+    const tokens = await this.createQueryBuilder('token')
+      .where('token.market_id IN (:...marketIds)', { marketIds })
+      .getMany();
+
+    const tokenMap = new Map<number, string[]>();
+    for (const token of tokens) {
+      const existing = tokenMap.get(token.marketId) || [];
+      existing.push(token.tokenId);
+      tokenMap.set(token.marketId, existing);
+    }
+
+    return tokenMap;
+  }
 }

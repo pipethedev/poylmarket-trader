@@ -58,4 +58,24 @@ export class MarketRepository extends BaseRepository<Market> {
       return acc;
     }, {});
   }
+
+  async findActiveMarketsWithTokens(): Promise<
+    Array<{
+      marketId: number;
+      conditionId: string | null;
+      tokenIds: string[];
+    }>
+  > {
+    const markets = await this.createQueryBuilder('market')
+      .leftJoinAndSelect('market.tokens', 'token')
+      .where('market.active = :active', { active: true })
+      .andWhere('market.closed = :closed', { closed: false })
+      .getMany();
+
+    return markets.map((market) => ({
+      marketId: market.id,
+      conditionId: market.conditionId,
+      tokenIds: market.tokens?.map((token) => token.tokenId) || [],
+    }));
+  }
 }

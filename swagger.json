@@ -1,0 +1,1324 @@
+{
+  "openapi": "3.0.0",
+  "paths": {
+    "/": {
+      "get": {
+        "operationId": "AppController_getStatus",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "System is running"
+          }
+        },
+        "summary": "Get system status",
+        "tags": [
+          "system"
+        ]
+      }
+    },
+    "/health": {
+      "get": {
+        "operationId": "AppController_getHealth",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "All services are healthy"
+          },
+          "503": {
+            "description": "One or more services are unhealthy"
+          }
+        },
+        "summary": "Health check endpoint",
+        "tags": [
+          "system"
+        ]
+      }
+    },
+    "/events": {
+      "get": {
+        "description": "Retrieves a paginated list of synced events with optional filters",
+        "operationId": "EventsController_getEvents",
+        "parameters": [
+          {
+            "name": "active",
+            "required": false,
+            "in": "query",
+            "description": "Filter by active status",
+            "schema": {
+              "example": true,
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "search",
+            "required": false,
+            "in": "query",
+            "description": "Search by title",
+            "schema": {
+              "example": "Bitcoin",
+              "type": "string"
+            }
+          },
+          {
+            "name": "page",
+            "required": false,
+            "in": "query",
+            "description": "Page number (1-indexed)",
+            "schema": {
+              "default": 1,
+              "example": 1,
+              "type": "number"
+            }
+          },
+          {
+            "name": "pageSize",
+            "required": false,
+            "in": "query",
+            "description": "Number of items per page",
+            "schema": {
+              "default": 20,
+              "example": 20,
+              "type": "number"
+            }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "description": "Number of items per page (alias for pageSize)",
+            "schema": {
+              "default": 20,
+              "example": 20,
+              "type": "number"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Events retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EventListResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "List events",
+        "tags": [
+          "events"
+        ]
+      }
+    },
+    "/events/{id}": {
+      "get": {
+        "description": "Retrieves details of a specific event including its markets",
+        "operationId": "EventsController_getEvent",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "Event ID",
+            "schema": {
+              "example": 1,
+              "type": "number"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Event retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EventDetailResponseDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Event not found"
+          }
+        },
+        "summary": "Get event by ID",
+        "tags": [
+          "events"
+        ]
+      }
+    },
+    "/events/{eventId}/markets": {
+      "get": {
+        "description": "Retrieves all markets associated with a specific event",
+        "operationId": "EventsController_getEventMarkets",
+        "parameters": [
+          {
+            "name": "eventId",
+            "required": true,
+            "in": "path",
+            "description": "Event ID",
+            "schema": {
+              "example": 1,
+              "type": "number"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Markets retrieved successfully"
+          },
+          "404": {
+            "description": "Event not found"
+          }
+        },
+        "summary": "Get markets for an event",
+        "tags": [
+          "events"
+        ]
+      }
+    },
+    "/events/sync": {
+      "post": {
+        "description": "Triggers a manual sync to fetch and update events and markets from Polymarket",
+        "operationId": "EventsController_syncEvents",
+        "parameters": [
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "description": "Maximum number of events to sync",
+            "schema": {
+              "example": 100,
+              "type": "number"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Sync completed successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SyncResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Sync events from Polymarket",
+        "tags": [
+          "events"
+        ]
+      }
+    },
+    "/markets": {
+      "get": {
+        "description": "Retrieves a paginated list of markets with optional filters",
+        "operationId": "MarketsController_getMarkets",
+        "parameters": [
+          {
+            "name": "eventId",
+            "required": false,
+            "in": "query",
+            "description": "Filter by event ID",
+            "schema": {
+              "example": 1,
+              "type": "number"
+            }
+          },
+          {
+            "name": "active",
+            "required": false,
+            "in": "query",
+            "description": "Filter by active status",
+            "schema": {
+              "example": true,
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "search",
+            "required": false,
+            "in": "query",
+            "description": "Search by question",
+            "schema": {
+              "example": "Bitcoin",
+              "type": "string"
+            }
+          },
+          {
+            "name": "page",
+            "required": false,
+            "in": "query",
+            "description": "Page number (1-indexed)",
+            "schema": {
+              "default": 1,
+              "example": 1,
+              "type": "number"
+            }
+          },
+          {
+            "name": "pageSize",
+            "required": false,
+            "in": "query",
+            "description": "Number of items per page",
+            "schema": {
+              "default": 20,
+              "example": 20,
+              "type": "number"
+            }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "description": "Number of items per page (alias for pageSize)",
+            "schema": {
+              "default": 20,
+              "example": 20,
+              "type": "number"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Markets retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MarketListResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "List markets",
+        "tags": [
+          "markets"
+        ]
+      }
+    },
+    "/markets/{id}": {
+      "get": {
+        "description": "Retrieves details of a specific market including its tokens",
+        "operationId": "MarketsController_getMarket",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "Market ID",
+            "schema": {
+              "example": 1,
+              "type": "number"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Market retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MarketDetailResponseDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Market not found"
+          }
+        },
+        "summary": "Get market by ID",
+        "tags": [
+          "markets"
+        ]
+      }
+    },
+    "/orders": {
+      "post": {
+        "description": "Creates a new order and queues it for processing. Requires an x-idempotency-key header.",
+        "operationId": "OrdersController_createOrder",
+        "parameters": [
+          {
+            "name": "x-idempotency-key",
+            "required": true,
+            "in": "header",
+            "description": "Unique key to ensure idempotent order creation",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateOrderDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Order created successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OrderResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid order parameters or missing idempotency key"
+          },
+          "404": {
+            "description": "Market not found"
+          },
+          "409": {
+            "description": "Idempotency key conflict - request is being processed or has different parameters"
+          }
+        },
+        "security": [
+          {
+            "x-idempotency-key": []
+          }
+        ],
+        "summary": "Create a new order",
+        "tags": [
+          "orders"
+        ]
+      },
+      "get": {
+        "description": "Retrieves a paginated list of orders with optional filters",
+        "operationId": "OrdersController_getOrders",
+        "parameters": [
+          {
+            "name": "marketId",
+            "required": false,
+            "in": "query",
+            "description": "Filter by market ID",
+            "schema": {
+              "example": 1,
+              "type": "number"
+            }
+          },
+          {
+            "name": "status",
+            "required": false,
+            "in": "query",
+            "description": "Filter by order status",
+            "schema": {
+              "example": "PENDING",
+              "type": "string",
+              "enum": [
+                "PENDING",
+                "QUEUED",
+                "PROCESSING",
+                "FILLED",
+                "PARTIALLY_FILLED",
+                "CANCELLED",
+                "FAILED"
+              ]
+            }
+          },
+          {
+            "name": "side",
+            "required": false,
+            "in": "query",
+            "description": "Filter by order side",
+            "schema": {
+              "example": "BUY",
+              "type": "string",
+              "enum": [
+                "BUY",
+                "SELL"
+              ]
+            }
+          },
+          {
+            "name": "outcome",
+            "required": false,
+            "in": "query",
+            "description": "Filter by outcome",
+            "schema": {
+              "example": "YES",
+              "type": "string",
+              "enum": [
+                "YES",
+                "NO"
+              ]
+            }
+          },
+          {
+            "name": "page",
+            "required": false,
+            "in": "query",
+            "description": "Page number (1-indexed)",
+            "schema": {
+              "default": 1,
+              "example": 1,
+              "type": "number"
+            }
+          },
+          {
+            "name": "pageSize",
+            "required": false,
+            "in": "query",
+            "description": "Number of items per page",
+            "schema": {
+              "default": 20,
+              "example": 20,
+              "type": "number"
+            }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "description": "Number of items per page (alias for pageSize)",
+            "schema": {
+              "default": 20,
+              "example": 20,
+              "type": "number"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Orders retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OrderListResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "List orders",
+        "tags": [
+          "orders"
+        ]
+      }
+    },
+    "/orders/{id}": {
+      "get": {
+        "description": "Retrieves details of a specific order",
+        "operationId": "OrdersController_getOrder",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "Order ID",
+            "schema": {
+              "example": 1,
+              "type": "number"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Order retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OrderResponseDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Order not found"
+          }
+        },
+        "summary": "Get order by ID",
+        "tags": [
+          "orders"
+        ]
+      },
+      "delete": {
+        "description": "Cancels a pending or queued order. Orders that are already processing or completed cannot be cancelled.",
+        "operationId": "OrdersController_cancelOrder",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "Order ID",
+            "schema": {
+              "example": 1,
+              "type": "number"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Order cancelled successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OrderResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Order cannot be cancelled in its current status"
+          },
+          "404": {
+            "description": "Order not found"
+          }
+        },
+        "summary": "Cancel an order",
+        "tags": [
+          "orders"
+        ]
+      }
+    },
+    "/orders/{orderId}/cancel": {
+      "post": {
+        "description": "Cancels a pending or queued order using POST method. Orders that are already processing or completed cannot be cancelled.",
+        "operationId": "OrdersController_cancelOrderPost",
+        "parameters": [
+          {
+            "name": "orderId",
+            "required": true,
+            "in": "path",
+            "description": "Order ID",
+            "schema": {
+              "example": 1,
+              "type": "number"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Order cancelled successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OrderResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Order cannot be cancelled in its current status"
+          },
+          "404": {
+            "description": "Order not found"
+          }
+        },
+        "summary": "Cancel an order (alternative endpoint)",
+        "tags": [
+          "orders"
+        ]
+      }
+    }
+  },
+  "info": {
+    "title": "Polymart Trader Task",
+    "description": "A trading system that syncs Polymarket events/markets data, accepts order requests, queues orders for execution, and handles order lifecycle.",
+    "version": "1.0",
+    "contact": {}
+  },
+  "tags": [
+    {
+      "name": "events",
+      "description": "Event management and synchronization"
+    },
+    {
+      "name": "markets",
+      "description": "Market data and pricing"
+    },
+    {
+      "name": "orders",
+      "description": "Order creation and management"
+    }
+  ],
+  "servers": [],
+  "components": {
+    "securitySchemes": {
+      "x-idempotency-key": {
+        "type": "apiKey",
+        "in": "header",
+        "name": "x-idempotency-key"
+      }
+    },
+    "schemas": {
+      "EventResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "number",
+            "description": "Unique event ID",
+            "example": 1
+          },
+          "externalId": {
+            "type": "string",
+            "description": "External event ID",
+            "example": "0x1234567890"
+          },
+          "title": {
+            "type": "string",
+            "description": "Event title",
+            "example": "Will Bitcoin reach $100k by end of 2024?"
+          },
+          "description": {
+            "type": "object",
+            "description": "Event description",
+            "example": "This market resolves YES if Bitcoin price reaches $100,000 USD..."
+          },
+          "slug": {
+            "type": "object",
+            "description": "Event slug",
+            "example": "bitcoin-100k-2024"
+          },
+          "startDate": {
+            "type": "object",
+            "description": "Event start date",
+            "example": "2024-01-01T00:00:00.000Z"
+          },
+          "endDate": {
+            "type": "object",
+            "description": "Event end date",
+            "example": "2024-12-31T23:59:59.000Z"
+          },
+          "active": {
+            "type": "boolean",
+            "description": "Whether the event is active",
+            "example": true
+          },
+          "createdAt": {
+            "format": "date-time",
+            "type": "string",
+            "description": "Event creation timestamp",
+            "example": "2024-01-15T10:30:00.000Z"
+          },
+          "updatedAt": {
+            "format": "date-time",
+            "type": "string",
+            "description": "Event last update timestamp",
+            "example": "2024-01-15T10:30:00.000Z"
+          },
+          "marketCount": {
+            "type": "number",
+            "description": "Number of markets in this event",
+            "example": 3
+          }
+        },
+        "required": [
+          "id",
+          "externalId",
+          "title",
+          "active",
+          "createdAt",
+          "updatedAt"
+        ]
+      },
+      "PaginationMetaDto": {
+        "type": "object",
+        "properties": {
+          "total": {
+            "type": "number",
+            "description": "Total number of items",
+            "example": 100
+          },
+          "perPage": {
+            "type": "number",
+            "description": "Number of items per page",
+            "example": 20
+          },
+          "currentPage": {
+            "type": "number",
+            "description": "Current page number",
+            "example": 1
+          },
+          "totalPages": {
+            "type": "number",
+            "description": "Total number of pages",
+            "example": 5
+          }
+        },
+        "required": [
+          "total",
+          "perPage",
+          "currentPage",
+          "totalPages"
+        ]
+      },
+      "EventListResponseDto": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "description": "List of events",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/EventResponseDto"
+            }
+          },
+          "meta": {
+            "description": "Pagination metadata",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/PaginationMetaDto"
+              }
+            ]
+          }
+        },
+        "required": [
+          "data",
+          "meta"
+        ]
+      },
+      "EventDetailResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "number",
+            "description": "Unique event ID",
+            "example": 1
+          },
+          "externalId": {
+            "type": "string",
+            "description": "External event ID",
+            "example": "0x1234567890"
+          },
+          "title": {
+            "type": "string",
+            "description": "Event title",
+            "example": "Will Bitcoin reach $100k by end of 2024?"
+          },
+          "description": {
+            "type": "object",
+            "description": "Event description",
+            "example": "This market resolves YES if Bitcoin price reaches $100,000 USD..."
+          },
+          "slug": {
+            "type": "object",
+            "description": "Event slug",
+            "example": "bitcoin-100k-2024"
+          },
+          "startDate": {
+            "type": "object",
+            "description": "Event start date",
+            "example": "2024-01-01T00:00:00.000Z"
+          },
+          "endDate": {
+            "type": "object",
+            "description": "Event end date",
+            "example": "2024-12-31T23:59:59.000Z"
+          },
+          "active": {
+            "type": "boolean",
+            "description": "Whether the event is active",
+            "example": true
+          },
+          "createdAt": {
+            "format": "date-time",
+            "type": "string",
+            "description": "Event creation timestamp",
+            "example": "2024-01-15T10:30:00.000Z"
+          },
+          "updatedAt": {
+            "format": "date-time",
+            "type": "string",
+            "description": "Event last update timestamp",
+            "example": "2024-01-15T10:30:00.000Z"
+          },
+          "marketCount": {
+            "type": "number",
+            "description": "Number of markets in this event",
+            "example": 3
+          },
+          "markets": {
+            "description": "Markets belonging to this event",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "id",
+          "externalId",
+          "title",
+          "active",
+          "createdAt",
+          "updatedAt"
+        ]
+      },
+      "SyncResponseDto": {
+        "type": "object",
+        "properties": {
+          "jobId": {
+            "type": "string",
+            "description": "Job ID for tracking the sync operation",
+            "example": "1234567890"
+          },
+          "message": {
+            "type": "string",
+            "description": "Message describing the sync operation status",
+            "example": "Sync job has been queued and will be processed in the background"
+          }
+        },
+        "required": [
+          "jobId",
+          "message"
+        ]
+      },
+      "MarketResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "number",
+            "description": "Market ID",
+            "example": 1
+          },
+          "externalId": {
+            "type": "string",
+            "description": "External market ID",
+            "example": "0x1234567890"
+          },
+          "conditionId": {
+            "type": "object",
+            "description": "Condition ID",
+            "example": "0xabcdef1234567890"
+          },
+          "eventId": {
+            "type": "number",
+            "description": "Event ID this market belongs to",
+            "example": 1
+          },
+          "question": {
+            "type": "string",
+            "description": "Market question",
+            "example": "Will Bitcoin reach $100k by end of 2024?"
+          },
+          "description": {
+            "type": "object",
+            "description": "Market description"
+          },
+          "outcomeYesPrice": {
+            "type": "string",
+            "description": "YES outcome price",
+            "example": "0.65000000"
+          },
+          "outcomeNoPrice": {
+            "type": "string",
+            "description": "NO outcome price",
+            "example": "0.35000000"
+          },
+          "volume": {
+            "type": "object",
+            "description": "Total market volume",
+            "example": "1000000.00"
+          },
+          "liquidity": {
+            "type": "object",
+            "description": "Market liquidity",
+            "example": "50000.00"
+          },
+          "active": {
+            "type": "boolean",
+            "description": "Whether the market is active",
+            "example": true
+          },
+          "closed": {
+            "type": "boolean",
+            "description": "Whether the market is closed",
+            "example": false
+          },
+          "createdAt": {
+            "format": "date-time",
+            "type": "string",
+            "description": "Market creation timestamp",
+            "example": "2024-01-15T10:30:00.000Z"
+          },
+          "updatedAt": {
+            "format": "date-time",
+            "type": "string",
+            "description": "Market last update timestamp",
+            "example": "2024-01-15T10:30:00.000Z"
+          }
+        },
+        "required": [
+          "id",
+          "externalId",
+          "eventId",
+          "question",
+          "outcomeYesPrice",
+          "outcomeNoPrice",
+          "active",
+          "closed",
+          "createdAt",
+          "updatedAt"
+        ]
+      },
+      "MarketListResponseDto": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "description": "List of markets",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/MarketResponseDto"
+            }
+          },
+          "meta": {
+            "description": "Pagination metadata",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/PaginationMetaDto"
+              }
+            ]
+          }
+        },
+        "required": [
+          "data",
+          "meta"
+        ]
+      },
+      "TokenResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "number",
+            "description": "Token ID",
+            "example": 1
+          },
+          "tokenId": {
+            "type": "string",
+            "description": "External token ID",
+            "example": "0x1234567890abcdef"
+          },
+          "outcome": {
+            "type": "string",
+            "description": "Token outcome",
+            "example": "YES",
+            "enum": [
+              "YES",
+              "NO"
+            ]
+          },
+          "price": {
+            "type": "string",
+            "description": "Current token price",
+            "example": "0.65000000"
+          }
+        },
+        "required": [
+          "id",
+          "tokenId",
+          "outcome",
+          "price"
+        ]
+      },
+      "MarketDetailResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "number",
+            "description": "Market ID",
+            "example": 1
+          },
+          "externalId": {
+            "type": "string",
+            "description": "External market ID",
+            "example": "0x1234567890"
+          },
+          "conditionId": {
+            "type": "object",
+            "description": "Condition ID",
+            "example": "0xabcdef1234567890"
+          },
+          "eventId": {
+            "type": "number",
+            "description": "Event ID this market belongs to",
+            "example": 1
+          },
+          "question": {
+            "type": "string",
+            "description": "Market question",
+            "example": "Will Bitcoin reach $100k by end of 2024?"
+          },
+          "description": {
+            "type": "object",
+            "description": "Market description"
+          },
+          "outcomeYesPrice": {
+            "type": "string",
+            "description": "YES outcome price",
+            "example": "0.65000000"
+          },
+          "outcomeNoPrice": {
+            "type": "string",
+            "description": "NO outcome price",
+            "example": "0.35000000"
+          },
+          "volume": {
+            "type": "object",
+            "description": "Total market volume",
+            "example": "1000000.00"
+          },
+          "liquidity": {
+            "type": "object",
+            "description": "Market liquidity",
+            "example": "50000.00"
+          },
+          "active": {
+            "type": "boolean",
+            "description": "Whether the market is active",
+            "example": true
+          },
+          "closed": {
+            "type": "boolean",
+            "description": "Whether the market is closed",
+            "example": false
+          },
+          "createdAt": {
+            "format": "date-time",
+            "type": "string",
+            "description": "Market creation timestamp",
+            "example": "2024-01-15T10:30:00.000Z"
+          },
+          "updatedAt": {
+            "format": "date-time",
+            "type": "string",
+            "description": "Market last update timestamp",
+            "example": "2024-01-15T10:30:00.000Z"
+          },
+          "tokens": {
+            "description": "Tokens for this market",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/TokenResponseDto"
+            }
+          },
+          "eventTitle": {
+            "type": "string",
+            "description": "Event title",
+            "example": "Bitcoin Price Predictions 2024"
+          },
+          "event": {
+            "type": "object",
+            "description": "Event details"
+          }
+        },
+        "required": [
+          "id",
+          "externalId",
+          "eventId",
+          "question",
+          "outcomeYesPrice",
+          "outcomeNoPrice",
+          "active",
+          "closed",
+          "createdAt",
+          "updatedAt"
+        ]
+      },
+      "CreateOrderDto": {
+        "type": "object",
+        "properties": {
+          "marketId": {
+            "type": "number",
+            "description": "The ID of the market to place the order on",
+            "example": 1
+          },
+          "side": {
+            "type": "string",
+            "description": "Order side - BUY or SELL",
+            "enum": [
+              "BUY",
+              "SELL"
+            ],
+            "example": "BUY"
+          },
+          "type": {
+            "type": "string",
+            "description": "Order type - MARKET or LIMIT",
+            "enum": [
+              "MARKET",
+              "LIMIT"
+            ],
+            "example": "LIMIT"
+          },
+          "outcome": {
+            "type": "string",
+            "description": "Outcome to trade - YES or NO",
+            "enum": [
+              "YES",
+              "NO"
+            ],
+            "example": "YES"
+          },
+          "quantity": {
+            "type": "string",
+            "description": "Quantity of tokens to trade",
+            "example": "100.00000000"
+          },
+          "price": {
+            "type": "string",
+            "description": "Limit price (required for LIMIT orders)",
+            "example": "0.65000000"
+          },
+          "metadata": {
+            "type": "object",
+            "description": "Additional metadata for the order"
+          }
+        },
+        "required": [
+          "marketId",
+          "side",
+          "type",
+          "outcome",
+          "quantity"
+        ]
+      },
+      "OrderResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "number",
+            "description": "Unique order ID",
+            "example": 1
+          },
+          "idempotencyKey": {
+            "type": "string",
+            "description": "Idempotency key used when creating this order",
+            "example": "order-123-abc"
+          },
+          "marketId": {
+            "type": "number",
+            "description": "Market ID this order belongs to",
+            "example": 1
+          },
+          "side": {
+            "type": "string",
+            "description": "Order side",
+            "enum": [
+              "BUY",
+              "SELL"
+            ],
+            "example": "BUY"
+          },
+          "type": {
+            "type": "string",
+            "description": "Order type",
+            "enum": [
+              "MARKET",
+              "LIMIT"
+            ],
+            "example": "LIMIT"
+          },
+          "outcome": {
+            "type": "string",
+            "description": "Outcome being traded",
+            "enum": [
+              "YES",
+              "NO"
+            ],
+            "example": "YES"
+          },
+          "quantity": {
+            "type": "string",
+            "description": "Order quantity",
+            "example": "100.00000000"
+          },
+          "price": {
+            "type": "object",
+            "description": "Limit price",
+            "example": "0.65000000"
+          },
+          "status": {
+            "type": "string",
+            "description": "Current order status",
+            "enum": [
+              "PENDING",
+              "QUEUED",
+              "PROCESSING",
+              "FILLED",
+              "PARTIALLY_FILLED",
+              "CANCELLED",
+              "FAILED"
+            ],
+            "example": "PENDING"
+          },
+          "filledQuantity": {
+            "type": "string",
+            "description": "Quantity that has been filled",
+            "example": "0.00000000"
+          },
+          "averageFillPrice": {
+            "type": "object",
+            "description": "Average fill price",
+            "example": "0.65000000"
+          },
+          "externalOrderId": {
+            "type": "object",
+            "description": "External order ID from the provider"
+          },
+          "failureReason": {
+            "type": "object",
+            "description": "Reason for failure if status is FAILED"
+          },
+          "createdAt": {
+            "format": "date-time",
+            "type": "string",
+            "description": "Order creation timestamp",
+            "example": "2024-01-15T10:30:00.000Z"
+          },
+          "updatedAt": {
+            "format": "date-time",
+            "type": "string",
+            "description": "Order last update timestamp",
+            "example": "2024-01-15T10:30:00.000Z"
+          }
+        },
+        "required": [
+          "id",
+          "idempotencyKey",
+          "marketId",
+          "side",
+          "type",
+          "outcome",
+          "quantity",
+          "status",
+          "filledQuantity",
+          "createdAt",
+          "updatedAt"
+        ]
+      },
+      "OrderListResponseDto": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "description": "List of orders",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/OrderResponseDto"
+            }
+          },
+          "meta": {
+            "description": "Pagination metadata",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/PaginationMetaDto"
+              }
+            ]
+          }
+        },
+        "required": [
+          "data",
+          "meta"
+        ]
+      }
+    }
+  }
+}

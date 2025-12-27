@@ -33,6 +33,12 @@ export class EventResponseDto {
   slug?: string | null;
 
   @ApiPropertyOptional({
+    description: 'Event image URL',
+    example: 'https://polymarket-upload.s3.us-east-2.amazonaws.com/event-image.png',
+  })
+  image?: string | null;
+
+  @ApiPropertyOptional({
     description: 'Event start date',
     example: '2024-01-01T00:00:00.000Z',
   })
@@ -49,6 +55,12 @@ export class EventResponseDto {
     example: true,
   })
   active: boolean;
+
+  @ApiProperty({
+    description: 'Whether the event is featured',
+    example: true,
+  })
+  featured: boolean;
 
   @ApiProperty({
     description: 'Event creation timestamp',

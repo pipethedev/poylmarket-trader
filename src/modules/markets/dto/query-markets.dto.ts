@@ -1,5 +1,13 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
-import { IsOptional, IsBoolean, IsInt, Min, IsString } from 'class-validator';
+import {
+  IsOptional,
+  IsBoolean,
+  IsInt,
+  Min,
+  IsString,
+  IsNumber,
+  IsDateString,
+} from 'class-validator';
 import { Type, Transform } from 'class-transformer';
 
 export class QueryMarketsDto {
@@ -23,12 +31,93 @@ export class QueryMarketsDto {
   active?: boolean;
 
   @ApiPropertyOptional({
+    description: 'Filter by closed status',
+    example: false,
+  })
+  @IsOptional()
+  @Transform(({ value }) => value === 'true' || value === true)
+  @IsBoolean()
+  closed?: boolean;
+
+  @ApiPropertyOptional({
     description: 'Search by question',
     example: 'Bitcoin',
   })
   @IsOptional()
   @IsString()
   search?: string;
+
+  @ApiPropertyOptional({
+    description: 'Minimum volume',
+    example: 1000,
+  })
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber()
+  @Min(0)
+  volumeMin?: number;
+
+  @ApiPropertyOptional({
+    description: 'Maximum volume',
+    example: 1000000,
+  })
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber()
+  @Min(0)
+  volumeMax?: number;
+
+  @ApiPropertyOptional({
+    description: 'Minimum liquidity',
+    example: 500,
+  })
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber()
+  @Min(0)
+  liquidityMin?: number;
+
+  @ApiPropertyOptional({
+    description: 'Maximum liquidity',
+    example: 50000,
+  })
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber()
+  @Min(0)
+  liquidityMax?: number;
+
+  @ApiPropertyOptional({
+    description: 'Minimum creation date (ISO 8601)',
+    example: '2024-01-01T00:00:00.000Z',
+  })
+  @IsOptional()
+  @IsDateString()
+  createdAtMin?: string;
+
+  @ApiPropertyOptional({
+    description: 'Maximum creation date (ISO 8601)',
+    example: '2024-12-31T23:59:59.999Z',
+  })
+  @IsOptional()
+  @IsDateString()
+  createdAtMax?: string;
+
+  @ApiPropertyOptional({
+    description: 'Minimum update date (ISO 8601)',
+    example: '2024-01-01T00:00:00.000Z',
+  })
+  @IsOptional()
+  @IsDateString()
+  updatedAtMin?: string;
+
+  @ApiPropertyOptional({
+    description: 'Maximum update date (ISO 8601)',
+    example: '2024-12-31T23:59:59.999Z',
+  })
+  @IsOptional()
+  @IsDateString()
+  updatedAtMax?: string;
 
   @ApiPropertyOptional({
     description: 'Page number (1-indexed)',

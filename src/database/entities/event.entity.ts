@@ -33,6 +33,9 @@ export class Event {
   @Column({ type: 'varchar', nullable: true })
   slug: string | null;
 
+  @Column({ type: 'varchar', length: 500, nullable: true })
+  image: string | null;
+
   @Column({ name: 'start_date', type: 'timestamptz', nullable: true })
   @Index('idx_events_start_date')
   startDate: Date | null;
@@ -44,6 +47,10 @@ export class Event {
   @Column({ default: true })
   @Index('idx_events_active')
   active: boolean;
+
+  @Column({ default: false })
+  @Index('idx_events_featured')
+  featured: boolean;
 
   @Column({ type: 'jsonb', nullable: true })
   metadata: Record<string, unknown> | null;
