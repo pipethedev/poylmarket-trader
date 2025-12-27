@@ -27,21 +27,13 @@ export class CreateOrdersTable1703600000003 implements MigrationInterface {
       )
     `);
 
-    await queryRunner.query(
-      `CREATE INDEX "idx_orders_idempotency_key" ON "orders" ("idempotency_key")`,
-    );
+    await queryRunner.query(`CREATE INDEX "idx_orders_idempotency_key" ON "orders" ("idempotency_key")`);
     await queryRunner.query(`CREATE INDEX "idx_orders_market_id" ON "orders" ("market_id")`);
     await queryRunner.query(`CREATE INDEX "idx_orders_status" ON "orders" ("status")`);
     await queryRunner.query(`CREATE INDEX "idx_orders_created_at" ON "orders" ("created_at")`);
-    await queryRunner.query(
-      `CREATE INDEX "idx_orders_market_status" ON "orders" ("market_id", "status")`,
-    );
-    await queryRunner.query(
-      `CREATE INDEX "idx_orders_status_created" ON "orders" ("status", "created_at")`,
-    );
-    await queryRunner.query(
-      `CREATE INDEX "idx_orders_pending" ON "orders" ("created_at") WHERE status = 'PENDING'`,
-    );
+    await queryRunner.query(`CREATE INDEX "idx_orders_market_status" ON "orders" ("market_id", "status")`);
+    await queryRunner.query(`CREATE INDEX "idx_orders_status_created" ON "orders" ("status", "created_at")`);
+    await queryRunner.query(`CREATE INDEX "idx_orders_pending" ON "orders" ("created_at") WHERE status = 'PENDING'`);
   }
 
   public async down(queryRunner: QueryRunner): Promise<void> {

@@ -21,10 +21,7 @@ describe('IdempotencyInterceptor', () => {
     debug: jest.fn(),
   };
 
-  const createMockExecutionContext = (
-    idempotencyKey: string | undefined = undefined,
-    body = {},
-  ) => {
+  const createMockExecutionContext = (idempotencyKey: string | undefined = undefined, body = {}) => {
     const headers: Record<string, string | undefined> = {
       'x-idempotency-key': idempotencyKey,
     };
@@ -51,11 +48,7 @@ describe('IdempotencyInterceptor', () => {
       releaseLock: jest.fn(),
     } as unknown as jest.Mocked<IdempotencyService>;
 
-    interceptor = new IdempotencyInterceptor(
-      reflector,
-      idempotencyService,
-      mockLogger as unknown as AppLogger,
-    );
+    interceptor = new IdempotencyInterceptor(reflector, idempotencyService, mockLogger as unknown as AppLogger);
   });
 
   describe('intercept', () => {
@@ -87,9 +80,7 @@ describe('IdempotencyInterceptor', () => {
       const context = createMockExecutionContext(undefined);
       const next: CallHandler = { handle: () => of({}) };
 
-      await expect(interceptor.intercept(context, next)).rejects.toThrow(
-        IdempotencyKeyRequiredException,
-      );
+      await expect(interceptor.intercept(context, next)).rejects.toThrow(IdempotencyKeyRequiredException);
     });
 
     it('should return cached response if exists', async () => {

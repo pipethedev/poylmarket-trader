@@ -1,13 +1,4 @@
-import {
-  Controller,
-  Get,
-  Post,
-  Query,
-  Param,
-  ParseIntPipe,
-  HttpCode,
-  HttpStatus,
-} from '@nestjs/common';
+import { Controller, Get, Post, Query, Param, ParseIntPipe, HttpCode, HttpStatus } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiParam, ApiQuery } from '@nestjs/swagger';
 import { EventsService } from './events.service';
 import { QueryEventsDto } from './dto/query-events.dto';

@@ -26,9 +26,7 @@ export class SyncService {
     private readonly wsService?: PolymarketWebSocketService,
     logger?: AppLogger,
   ) {
-    this.logger = (logger || new AppLogger())
-      .setPrefix(LogPrefix.SYNC)
-      .setContext(SyncService.name);
+    this.logger = (logger || new AppLogger()).setPrefix(LogPrefix.SYNC).setContext(SyncService.name);
   }
 
   async syncEvents(limit = 50): Promise<SyncResult> {
@@ -62,10 +60,7 @@ export class SyncService {
             result.eventsUpdated++;
           }
 
-          const marketsResult = await this.syncMarketsForEvent(
-            providerEvent.id,
-            eventResult.event.id,
-          );
+          const marketsResult = await this.syncMarketsForEvent(providerEvent.id, eventResult.event.id);
           result.marketsCreated += marketsResult.marketsCreated;
           result.marketsUpdated += marketsResult.marketsUpdated;
           result.tokensCreated += marketsResult.tokensCreated;
@@ -152,9 +147,7 @@ export class SyncService {
 
       const activeMarkets = providerMarkets.filter((market) => market.active && !market.closed);
 
-      eventLogger.log(
-        `Syncing ${activeMarkets.length} active markets (filtered from ${providerMarkets.length} total)`,
-      );
+      eventLogger.log(`Syncing ${activeMarkets.length} active markets (filtered from ${providerMarkets.length} total)`);
 
       for (const providerMarket of activeMarkets) {
         try {
@@ -173,9 +166,7 @@ export class SyncService {
         }
       }
     } catch (error) {
-      result.errors.push(
-        `Failed to fetch markets for event ${providerEventId}: ${(error as Error).message}`,
-      );
+      result.errors.push(`Failed to fetch markets for event ${providerEventId}: ${(error as Error).message}`);
     }
 
     return result;
@@ -208,10 +199,7 @@ export class SyncService {
       if (market) {
         MarketFactory.update(market, providerMarket);
       } else {
-        market = queryRunner.manager.create(
-          Market,
-          MarketFactory.create(providerMarket, localEventId, providerName),
-        );
+        market = queryRunner.manager.create(Market, MarketFactory.create(providerMarket, localEventId, providerName));
       }
 
       market = await queryRunner.manager.save(Market, market);
@@ -243,9 +231,7 @@ export class SyncService {
           await this.wsService.subscribeToTokenIds(tokenIds);
           this.logger.log(`Subscribed to ${tokenIds.length} token IDs for market ${market.id}`);
         } catch (error) {
-          this.logger.warn(
-            `Failed to subscribe to token IDs for market ${market.id}: ${(error as Error).message}`,
-          );
+          this.logger.warn(`Failed to subscribe to token IDs for market ${market.id}: ${(error as Error).message}`);
         }
       }
 
@@ -313,9 +299,7 @@ export class SyncService {
           result.updated++;
         } catch (error) {
           await queryRunner.rollbackTransaction();
-          result.errors.push(
-            `Failed to update price for market ${market.id}: ${(error as Error).message}`,
-          );
+          result.errors.push(`Failed to update price for market ${market.id}: ${(error as Error).message}`);
         } finally {
           await queryRunner.release();
         }
@@ -350,9 +334,7 @@ export class SyncService {
         }
       } else if (allMarketsClosed) {
         await this.eventRepository.update(eventId, { active: false });
-        this.logger.log(
-          `Marked event ${eventId} as inactive (all ${markets.length} markets closed)`,
-        );
+        this.logger.log(`Marked event ${eventId} as inactive (all ${markets.length} markets closed)`);
       } else {
         const event = await this.eventRepository.findOneBy({ id: eventId });
         if (event && event.active) {
@@ -361,9 +343,7 @@ export class SyncService {
         }
       }
     } catch (error) {
-      this.logger.warn(
-        `Failed to update event status for event ${eventId}: ${(error as Error).message}`,
-      );
+      this.logger.warn(`Failed to update event status for event ${eventId}: ${(error as Error).message}`);
     }
   }
 

@@ -41,8 +41,7 @@ export class UsdcTokenService {
     }
 
     this.usdcAddress =
-      this.configService.get<string>('polymarket.usdcAddress') ||
-      '0x3c499c542cEF5E3811e1192ce70d8cC03d5c3359';
+      this.configService.get<string>('polymarket.usdcAddress') || '0x3c499c542cEF5E3811e1192ce70d8cC03d5c3359';
 
     this.rpcUrl = rpcUrl;
 
@@ -77,9 +76,7 @@ export class UsdcTokenService {
       const decimals = await this.usdcContract.decimals();
       return (Number(allowance) / 10 ** decimals).toString();
     } catch (error) {
-      this.logger.error(
-        `Failed to get USDC allowance for ${userAddress}: ${(error as Error).message}`,
-      );
+      this.logger.error(`Failed to get USDC allowance for ${userAddress}: ${(error as Error).message}`);
       throw error;
     }
   }
@@ -90,9 +87,7 @@ export class UsdcTokenService {
 
       const balanceFormatted = (Number(balance) / 10 ** 18).toString();
 
-      this.logger.debug(
-        `Server wallet MATIC balance: ${balanceFormatted} MATIC (${balance.toString()} wei)`,
-      );
+      this.logger.debug(`Server wallet MATIC balance: ${balanceFormatted} MATIC (${balance.toString()} wei)`);
       return balanceFormatted;
     } catch (error) {
       this.logger.error(`Failed to get server wallet MATIC balance: ${(error as Error).message}`);
@@ -109,20 +104,14 @@ export class UsdcTokenService {
     const minPriorityFee = BigInt('25000000000');
     const minBaseFee = BigInt('30000000000');
 
-    const networkPriorityFee = feeData.maxPriorityFeePerGas
-      ? BigInt(feeData.maxPriorityFeePerGas.toString())
-      : null;
+    const networkPriorityFee = feeData.maxPriorityFeePerGas ? BigInt(feeData.maxPriorityFeePerGas.toString()) : null;
     const networkBaseFee = feeData.maxFeePerGas ? BigInt(feeData.maxFeePerGas.toString()) : null;
 
     const maxPriorityFeePerGas =
-      networkPriorityFee && networkPriorityFee > minPriorityFee
-        ? networkPriorityFee
-        : minPriorityFee;
+      networkPriorityFee && networkPriorityFee > minPriorityFee ? networkPriorityFee : minPriorityFee;
 
     const maxFeePerGas =
-      networkBaseFee && networkBaseFee > minBaseFee
-        ? networkBaseFee
-        : maxPriorityFeePerGas + minBaseFee;
+      networkBaseFee && networkBaseFee > minBaseFee ? networkBaseFee : maxPriorityFeePerGas + minBaseFee;
 
     return {
       maxFeePerGas,
@@ -160,9 +149,7 @@ export class UsdcTokenService {
         maxPriorityFeePerGas,
       });
 
-      this.logger.log(
-        `Transferring ${amount} USDC from ${userAddress} to ${this.funderAddress}. Tx: ${tx.hash}`,
-      );
+      this.logger.log(`Transferring ${amount} USDC from ${userAddress} to ${this.funderAddress}. Tx: ${tx.hash}`);
 
       const receipt = await tx.wait();
       this.logger.log(`Transfer completed. Block: ${receipt.blockNumber}`);
@@ -172,10 +159,7 @@ export class UsdcTokenService {
       const errorMessage = (error as Error).message;
       this.logger.error(`Failed to transfer USDC from ${userAddress}: ${errorMessage}`);
 
-      if (
-        errorMessage.includes('insufficient funds') ||
-        errorMessage.includes('INSUFFICIENT_FUNDS')
-      ) {
+      if (errorMessage.includes('insufficient funds') || errorMessage.includes('INSUFFICIENT_FUNDS')) {
         throw new Error(
           `Server wallet has insufficient MATIC for gas fees. Please fund the server wallet address ${this.serverWallet.address} with MATIC (Polygon's native token) to pay for transaction gas fees.`,
         );

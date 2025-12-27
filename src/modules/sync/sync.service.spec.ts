@@ -326,9 +326,7 @@ describe('SyncService', () => {
     });
 
     it('should handle errors when fetching active markets', async () => {
-      marketRepository.findActiveMarketsWithPriceInfo.mockRejectedValue(
-        new Error('DB connection failed'),
-      );
+      marketRepository.findActiveMarketsWithPriceInfo.mockRejectedValue(new Error('DB connection failed'));
 
       const result = await service.updateMarketPrices();
 

@@ -4,9 +4,7 @@ export class RemoveIdempotencyKeyUniqueConstraint1766799000000 implements Migrat
   name = 'RemoveIdempotencyKeyUniqueConstraint1766799000000';
 
   public async up(queryRunner: QueryRunner): Promise<void> {
-    await queryRunner.query(
-      `ALTER TABLE "orders" DROP CONSTRAINT IF EXISTS "UQ_orders_idempotency_key"`,
-    );
+    await queryRunner.query(`ALTER TABLE "orders" DROP CONSTRAINT IF EXISTS "UQ_orders_idempotency_key"`);
   }
 
   public async down(queryRunner: QueryRunner): Promise<void> {

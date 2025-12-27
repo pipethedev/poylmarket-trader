@@ -30,9 +30,7 @@ export class MarketRepository extends BaseRepository<Market> {
     return this.findManyBy({ active: true, closed: false });
   }
 
-  async findActiveMarketsWithPriceInfo(): Promise<
-    Pick<Market, 'id' | 'externalId' | 'conditionId'>[]
-  > {
+  async findActiveMarketsWithPriceInfo(): Promise<Pick<Market, 'id' | 'externalId' | 'conditionId'>[]> {
     return this.findMany({
       where: { active: true },
       select: ['id', 'externalId', 'conditionId'],

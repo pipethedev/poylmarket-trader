@@ -26,8 +26,7 @@ export class OrdersProcessor extends WorkerHost {
   ) {
     super();
     this.logger = logger.setPrefix(LogPrefix.QUEUE).setContext(OrdersProcessor.name);
-    this.enableRealTrading =
-      this.configService.get<boolean>('polymarket.enableRealTrading') ?? false;
+    this.enableRealTrading = this.configService.get<boolean>('polymarket.enableRealTrading') ?? false;
   }
 
   async process(job: Job<OrderJobData>): Promise<void> {
@@ -97,10 +96,7 @@ export class OrdersProcessor extends WorkerHost {
       await queryRunner.commitTransaction();
     } catch (error) {
       await queryRunner.rollbackTransaction();
-      jobLogger.error(
-        `Error processing order: ${(error as Error).message}`,
-        (error as Error).stack,
-      );
+      jobLogger.error(`Error processing order: ${(error as Error).message}`, (error as Error).stack);
       throw error;
     } finally {
       await queryRunner.release();
@@ -227,13 +223,8 @@ export class OrdersProcessor extends WorkerHost {
           }
 
           if (order.side === 'BUY' && parseFloat(usdcAmount) > 0) {
-            logger.log(
-              `Transferring ${usdcAmount} USDC from ${order.userWalletAddress} to funder address`,
-            );
-            const txHash = await this.usdcTokenService.transferFromUser(
-              order.userWalletAddress,
-              usdcAmount,
-            );
+            logger.log(`Transferring ${usdcAmount} USDC from ${order.userWalletAddress} to funder address`);
+            const txHash = await this.usdcTokenService.transferFromUser(order.userWalletAddress, usdcAmount);
             logger.log(`USDC transfer completed. Transaction: ${txHash}`);
 
             const funderAddress = this.usdcTokenService.getFunderAddress();
@@ -286,9 +277,7 @@ export class OrdersProcessor extends WorkerHost {
 
         if (
           errorMessage.includes('invalid price') ||
-          (errorMessage.includes('price') &&
-            errorMessage.includes('min') &&
-            errorMessage.includes('max'))
+          (errorMessage.includes('price') && errorMessage.includes('min') && errorMessage.includes('max'))
         ) {
           logger.error(
             `Order placement failed due to invalid price: ${errorMessage}. ` +

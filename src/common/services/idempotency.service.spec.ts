@@ -78,9 +78,7 @@ describe('IdempotencyService', () => {
       };
       redisService.get.mockResolvedValue(JSON.stringify(lockedData));
 
-      await expect(service.checkAndLock('locked-key', {}, 3600)).rejects.toThrow(
-        IdempotencyKeyConflictException,
-      );
+      await expect(service.checkAndLock('locked-key', {}, 3600)).rejects.toThrow(IdempotencyKeyConflictException);
     });
 
     it('should throw conflict if request hash mismatch', async () => {
@@ -105,11 +103,7 @@ describe('IdempotencyService', () => {
 
       await service.storeResponse('key', 200, { result: 'success' });
 
-      expect(redisService.set).toHaveBeenCalledWith(
-        'idempotency:key',
-        expect.stringContaining('"locked":false'),
-        1800,
-      );
+      expect(redisService.set).toHaveBeenCalledWith('idempotency:key', expect.stringContaining('"locked":false'), 1800);
     });
 
     it('should use default TTL if key has no TTL', async () => {

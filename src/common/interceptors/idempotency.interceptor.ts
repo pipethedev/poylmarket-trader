@@ -56,17 +56,11 @@ export class IdempotencyInterceptor implements NestInterceptor {
     return next.handle().pipe(
       switchMap((data) =>
         from(
-          this.idempotencyService.storeResponse(
-            idempotencyKey,
-            response.statusCode,
-            data as Record<string, unknown>,
-          ),
+          this.idempotencyService.storeResponse(idempotencyKey, response.statusCode, data as Record<string, unknown>),
         ).pipe(switchMap(() => of(data))),
       ),
       catchError((error: Error) =>
-        from(this.idempotencyService.releaseLock(idempotencyKey)).pipe(
-          switchMap(() => throwError(() => error)),
-        ),
+        from(this.idempotencyService.releaseLock(idempotencyKey)).pipe(switchMap(() => throwError(() => error))),
       ),
     );
   }

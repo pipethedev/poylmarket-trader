@@ -29,11 +29,7 @@ export class IdempotencyService {
     this.logger = logger.setPrefix(LogPrefix.API).setContext(IdempotencyService.name);
   }
 
-  async checkAndLock(
-    key: string,
-    requestBody: unknown,
-    expiresInSeconds: number,
-  ): Promise<IdempotencyResult> {
+  async checkAndLock(key: string, requestBody: unknown, expiresInSeconds: number): Promise<IdempotencyResult> {
     const requestHash = this.hashRequest(requestBody);
     const redisKey = this.buildKey(key);
 

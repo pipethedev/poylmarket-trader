@@ -7,13 +7,7 @@ import { TestAppFactory } from './utils/test-app.factory';
 import { TestDbHelper } from './utils/test-db.helper';
 import { TestDataFactory } from './utils/test-data.factory';
 import { TokenOutcome } from '@database/entities/token.entity';
-import {
-  OrderOutcome,
-  OrderStatus,
-  OrderType,
-  OrderSide,
-  Order,
-} from '@database/entities/order.entity';
+import { OrderOutcome, OrderStatus, OrderType, OrderSide, Order } from '@database/entities/order.entity';
 import { Market } from '@database/entities/market.entity';
 import { OrderRepository } from '@database/repositories/order.repository';
 
@@ -63,9 +57,7 @@ describe('Orders API (e2e)', () => {
       ordersQueue.getActiveCount(),
       ordersQueue.getDelayedCount(),
     ]);
-    throw new Error(
-      `Queue not empty within ${timeout}ms. Waiting: ${waiting}, Active: ${active}, Delayed: ${delayed}`,
-    );
+    throw new Error(`Queue not empty within ${timeout}ms. Waiting: ${waiting}, Active: ${active}, Delayed: ${delayed}`);
   }
 
   beforeAll(async () => {
@@ -291,10 +283,7 @@ describe('Orders API (e2e)', () => {
       await dataFactory.createOrder(market.id, OrderOutcome.NO);
       await dataFactory.createOrder(market.id, OrderOutcome.YES);
 
-      const response = await request(app.getHttpServer())
-        .get('/orders')
-        .query({ page: 1, limit: 2 })
-        .expect(200);
+      const response = await request(app.getHttpServer()).get('/orders').query({ page: 1, limit: 2 }).expect(200);
 
       expect(response.body.data).toHaveLength(2);
       expect(response.body.meta).toEqual({
@@ -333,10 +322,7 @@ describe('Orders API (e2e)', () => {
       await dataFactory.createOrder(market1.id, OrderOutcome.YES);
       await dataFactory.createOrder(market2.id, OrderOutcome.NO);
 
-      const response = await request(app.getHttpServer())
-        .get('/orders')
-        .query({ marketId: market1.id })
-        .expect(200);
+      const response = await request(app.getHttpServer()).get('/orders').query({ marketId: market1.id }).expect(200);
 
       expect(response.body.data).toHaveLength(1);
       expect(response.body.data[0].marketId).toBe(market1.id);
@@ -437,10 +423,7 @@ describe('Orders API (e2e)', () => {
       const market = await dataFactory.createMarket(event.id);
       await dataFactory.createOrder(market.id, OrderOutcome.YES);
 
-      const response = await request(app.getHttpServer())
-        .get('/orders')
-        .query({ page: 100, limit: 10 })
-        .expect(200);
+      const response = await request(app.getHttpServer()).get('/orders').query({ page: 100, limit: 10 }).expect(200);
 
       expect(response.body.data).toHaveLength(0);
       expect(response.body.meta.currentPage).toBe(100);
@@ -649,9 +632,7 @@ describe('Orders API (e2e)', () => {
       const orderBeforeCancel = await orderRepository.findById(orderId);
       expect([OrderStatus.PENDING, OrderStatus.QUEUED]).toContain(orderBeforeCancel?.status);
 
-      const cancelResponse = await request(app.getHttpServer())
-        .delete(`/orders/${orderId}`)
-        .expect(200);
+      const cancelResponse = await request(app.getHttpServer()).delete(`/orders/${orderId}`).expect(200);
 
       expect(cancelResponse.body.status).toBe(OrderStatus.CANCELLED);
 

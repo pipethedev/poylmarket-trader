@@ -73,10 +73,7 @@ export class SchedulerService implements OnModuleInit {
         result.errors.forEach((error) => this.logger.error(error));
       }
     } catch (error) {
-      this.logger.error(
-        `Scheduled sync failed: ${(error as Error).message}`,
-        (error as Error).stack,
-      );
+      this.logger.error(`Scheduled sync failed: ${(error as Error).message}`, (error as Error).stack);
     }
   }
 
@@ -97,10 +94,7 @@ export class SchedulerService implements OnModuleInit {
         this.logger.warn(`Price update completed with ${result.errors.length} errors`);
       }
     } catch (error) {
-      this.logger.error(
-        `Scheduled price update failed: ${(error as Error).message}`,
-        (error as Error).stack,
-      );
+      this.logger.error(`Scheduled price update failed: ${(error as Error).message}`, (error as Error).stack);
     }
   }
 }

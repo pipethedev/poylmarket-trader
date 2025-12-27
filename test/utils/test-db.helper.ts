@@ -28,9 +28,7 @@ export class TestDbHelper {
 
         if (tables.length > 0) {
           try {
-            const tableNames = tables
-              .map((t: { tablename: string }) => `"${t.tablename}"`)
-              .join(', ');
+            const tableNames = tables.map((t: { tablename: string }) => `"${t.tablename}"`).join(', ');
             await queryRunner.query(`TRUNCATE TABLE ${tableNames} CASCADE;`);
           } catch (batchError) {
             const errorMessage = (batchError as Error).message || String(batchError);
@@ -40,10 +38,7 @@ export class TestDbHelper {
                   try {
                     await queryRunner.query(`TRUNCATE TABLE "${table.tablename}" CASCADE;`);
                   } catch (individualError) {
-                    console.warn(
-                      `Failed to truncate ${table.tablename}:`,
-                      (individualError as Error).message,
-                    );
+                    console.warn(`Failed to truncate ${table.tablename}:`, (individualError as Error).message);
                   }
                 }
               } else {
@@ -60,10 +55,7 @@ export class TestDbHelper {
       } catch (error) {
         lastError = error as Error;
         const errorMessage = (error as Error).message || String(error);
-        if (
-          attempt < maxRetries &&
-          (errorMessage.includes('deadlock') || errorMessage.includes('lock'))
-        ) {
+        if (attempt < maxRetries && (errorMessage.includes('deadlock') || errorMessage.includes('lock'))) {
           console.warn(`Database cleanup attempt ${attempt} failed, retrying...`, errorMessage);
         } else {
           throw error;

@@ -68,9 +68,7 @@ describe('SignatureValidationService', () => {
       const result = service.verifyMessage(testMessage, testSignature, testAddress);
 
       expect(result).toBe(false);
-      expect(mockLogger.warn).toHaveBeenCalledWith(
-        expect.stringContaining('Signature validation failed'),
-      );
+      expect(mockLogger.warn).toHaveBeenCalledWith(expect.stringContaining('Signature validation failed'));
     });
 
     it('should log recovered and expected addresses on failure', () => {
@@ -121,11 +119,7 @@ describe('SignatureValidationService', () => {
       const mixedCaseAddress = '0xAbCd...';
       (wallet.verifyMessage as jest.Mock).mockReturnValue(mixedCaseAddress.toLowerCase());
 
-      const result = service.verifyMessage(
-        testMessage,
-        testSignature,
-        mixedCaseAddress.toUpperCase(),
-      );
+      const result = service.verifyMessage(testMessage, testSignature, mixedCaseAddress.toUpperCase());
 
       expect(result).toBe(true);
     });

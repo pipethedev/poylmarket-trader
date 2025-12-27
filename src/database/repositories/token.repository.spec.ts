@@ -85,10 +85,7 @@ describe('TokenRepository', () => {
 
       await tokenRepository.updatePriceByMarketIdAndOutcome(1, TokenOutcome.YES, '0.70');
 
-      expect(repository.update).toHaveBeenCalledWith(
-        { marketId: 1, outcome: TokenOutcome.YES },
-        { price: '0.70' },
-      );
+      expect(repository.update).toHaveBeenCalledWith({ marketId: 1, outcome: TokenOutcome.YES }, { price: '0.70' });
     });
   });
 

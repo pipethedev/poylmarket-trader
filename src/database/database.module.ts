@@ -4,12 +4,7 @@ import { Event } from './entities/event.entity';
 import { Market } from './entities/market.entity';
 import { Token } from './entities/token.entity';
 import { Order } from './entities/order.entity';
-import {
-  EventRepository,
-  MarketRepository,
-  TokenRepository,
-  OrderRepository,
-} from './repositories/index';
+import { EventRepository, MarketRepository, TokenRepository, OrderRepository } from './repositories/index';
 import { ProvidersModule } from '@providers/providers.module';
 
 const entities = [Event, Market, Token, Order];

@@ -11,12 +11,9 @@ export class OrderNotFoundException extends AppException {
 
 export class DuplicateOrderException extends AppException {
   constructor(idempotencyKey: string) {
-    super(
-      'DUPLICATE_ORDER',
-      `Order with idempotency key ${idempotencyKey} already exists`,
-      HttpStatus.CONFLICT,
-      { idempotencyKey },
-    );
+    super('DUPLICATE_ORDER', `Order with idempotency key ${idempotencyKey} already exists`, HttpStatus.CONFLICT, {
+      idempotencyKey,
+    });
   }
 }
 
@@ -33,12 +30,10 @@ export class OrderNotCancellableException extends AppException {
 
 export class OrderProcessingException extends AppException {
   constructor(orderId: string, reason: string) {
-    super(
-      'ORDER_PROCESSING_ERROR',
-      `Failed to process order ${orderId}: ${reason}`,
-      HttpStatus.INTERNAL_SERVER_ERROR,
-      { orderId, reason },
-    );
+    super('ORDER_PROCESSING_ERROR', `Failed to process order ${orderId}: ${reason}`, HttpStatus.INTERNAL_SERVER_ERROR, {
+      orderId,
+      reason,
+    });
   }
 }
 
@@ -52,12 +47,7 @@ export class MarketNotFoundException extends AppException {
 
 export class MarketNotActiveException extends AppException {
   constructor(marketId: string) {
-    super(
-      'MARKET_NOT_ACTIVE',
-      `Market ${marketId} is not active for trading`,
-      HttpStatus.BAD_REQUEST,
-      { marketId },
-    );
+    super('MARKET_NOT_ACTIVE', `Market ${marketId} is not active for trading`, HttpStatus.BAD_REQUEST, { marketId });
   }
 }
 
@@ -80,12 +70,9 @@ export class ProviderException extends AppException {
 
 export class ProviderUnavailableException extends AppException {
   constructor(provider: string) {
-    super(
-      'PROVIDER_UNAVAILABLE',
-      `Provider ${provider} is currently unavailable`,
-      HttpStatus.SERVICE_UNAVAILABLE,
-      { provider },
-    );
+    super('PROVIDER_UNAVAILABLE', `Provider ${provider} is currently unavailable`, HttpStatus.SERVICE_UNAVAILABLE, {
+      provider,
+    });
   }
 }
 
@@ -112,23 +99,16 @@ export class IdempotencyKeyConflictException extends AppException {
 
 export class InvalidOrderParametersException extends AppException {
   constructor(details: Record<string, unknown>) {
-    super(
-      'INVALID_ORDER_PARAMETERS',
-      'Invalid order parameters provided',
-      HttpStatus.BAD_REQUEST,
-      details,
-    );
+    super('INVALID_ORDER_PARAMETERS', 'Invalid order parameters provided', HttpStatus.BAD_REQUEST, details);
   }
 }
 
 export class OptimisticLockException extends AppException {
   constructor(entity: string, id: string) {
-    super(
-      'OPTIMISTIC_LOCK_ERROR',
-      `${entity} ${id} was modified by another process`,
-      HttpStatus.CONFLICT,
-      { entity, id },
-    );
+    super('OPTIMISTIC_LOCK_ERROR', `${entity} ${id} was modified by another process`, HttpStatus.CONFLICT, {
+      entity,
+      id,
+    });
   }
 }
 

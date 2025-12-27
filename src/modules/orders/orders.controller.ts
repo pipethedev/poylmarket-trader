@@ -12,14 +12,7 @@ import {
   HttpStatus,
   ParseIntPipe,
 } from '@nestjs/common';
-import {
-  ApiTags,
-  ApiOperation,
-  ApiResponse,
-  ApiHeader,
-  ApiParam,
-  ApiSecurity,
-} from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiResponse, ApiHeader, ApiParam, ApiSecurity } from '@nestjs/swagger';
 import { OrdersService } from './orders.service';
 import { CreateOrderDto } from './dto/create-order.dto';
 import { QueryOrdersDto } from './dto/query-orders.dto';
@@ -43,8 +36,7 @@ export class OrdersController {
   @HttpCode(HttpStatus.CREATED)
   @ApiOperation({
     summary: 'Create a new order',
-    description:
-      'Creates a new order and queues it for processing. Requires an x-idempotency-key header.',
+    description: 'Creates a new order and queues it for processing. Requires an x-idempotency-key header.',
   })
   @ApiHeader({
     name: 'x-idempotency-key',
@@ -68,8 +60,7 @@ export class OrdersController {
   })
   @ApiResponse({
     status: 409,
-    description:
-      'Idempotency key conflict - request is being processed or has different parameters',
+    description: 'Idempotency key conflict - request is being processed or has different parameters',
   })
   async createOrder(
     @Body() dto: CreateOrderDto,
@@ -171,9 +162,7 @@ export class OrdersController {
     status: 404,
     description: 'Order not found',
   })
-  async cancelOrderPost(
-    @Param('orderId', ParseIntPipe) orderId: number,
-  ): Promise<OrderResponseDto> {
+  async cancelOrderPost(@Param('orderId', ParseIntPipe) orderId: number): Promise<OrderResponseDto> {
     return this.ordersService.cancelOrder(orderId);
   }
 
@@ -198,9 +187,7 @@ export class OrdersController {
       },
     },
   })
-  async getUsdcBalance(
-    @Param('address') address: string,
-  ): Promise<{ balance: string; address: string }> {
+  async getUsdcBalance(@Param('address') address: string): Promise<{ balance: string; address: string }> {
     const balance = await this.usdcTokenService.getBalance(address);
     return { balance, address };
   }

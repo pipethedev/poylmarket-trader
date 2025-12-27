@@ -36,9 +36,7 @@ export class EventsService {
     private readonly syncService?: SyncService,
     logger?: AppLogger,
   ) {
-    this.logger = (logger || new AppLogger())
-      .setPrefix(LogPrefix.API)
-      .setContext(EventsService.name);
+    this.logger = (logger || new AppLogger()).setPrefix(LogPrefix.API).setContext(EventsService.name);
   }
 
   async getEvents(query: QueryEventsDto): Promise<EventListResponseDto> {
@@ -72,9 +70,7 @@ export class EventsService {
     this.logger.log(`Found ${result.meta.total} events in database`);
 
     if (result.meta.total === 0 && query.search && this.marketProvider && this.syncService) {
-      this.logger.log(
-        `No events found in database for search "${query.search}", attempting API fallback`,
-      );
+      this.logger.log(`No events found in database for search "${query.search}", attempting API fallback`);
 
       try {
         const providerEvents = await this.marketProvider.getEvents({
@@ -101,9 +97,7 @@ export class EventsService {
               const eventResult = await this.syncService.syncEvent(providerEvent);
               await this.syncService.syncMarketsForEvent(providerEvent.id, eventResult.event.id);
             } catch (error) {
-              this.logger.warn(
-                `Failed to sync event ${providerEvent.id} from API: ${(error as Error).message}`,
-              );
+              this.logger.warn(`Failed to sync event ${providerEvent.id} from API: ${(error as Error).message}`);
             }
           }
 
@@ -113,8 +107,7 @@ export class EventsService {
           });
 
           const retryEventIds = retryResult.data.map((e) => e.id);
-          const retryMarketCounts =
-            await this.marketRepository.getMarketCountsByEventIds(retryEventIds);
+          const retryMarketCounts = await this.marketRepository.getMarketCountsByEventIds(retryEventIds);
 
           this.logger.log(`After API sync, found ${retryResult.meta.total} events`);
 

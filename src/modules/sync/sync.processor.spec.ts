@@ -84,15 +84,9 @@ describe('SyncProcessor', () => {
       });
       expect(mockLogger.log).toHaveBeenCalledWith('Processing sync job');
       expect(mockLogger.log).toHaveBeenCalledWith(expect.stringContaining('Sync completed'));
-      expect(mockLogger.log).toHaveBeenCalledWith(
-        expect.stringContaining('Events: 5 created, 3 updated'),
-      );
-      expect(mockLogger.log).toHaveBeenCalledWith(
-        expect.stringContaining('Markets: 10 created, 7 updated'),
-      );
-      expect(mockLogger.log).toHaveBeenCalledWith(
-        expect.stringContaining('Tokens: 20 created, 14 updated'),
-      );
+      expect(mockLogger.log).toHaveBeenCalledWith(expect.stringContaining('Events: 5 created, 3 updated'));
+      expect(mockLogger.log).toHaveBeenCalledWith(expect.stringContaining('Markets: 10 created, 7 updated'));
+      expect(mockLogger.log).toHaveBeenCalledWith(expect.stringContaining('Tokens: 20 created, 14 updated'));
     });
 
     it('should log warning when sync completes with errors', async () => {
@@ -126,10 +120,7 @@ describe('SyncProcessor', () => {
 
       await expect(processor.process(job)).rejects.toThrow('Sync service failed');
 
-      expect(mockLogger.error).toHaveBeenCalledWith(
-        'Sync job failed: Sync service failed',
-        expect.any(String),
-      );
+      expect(mockLogger.error).toHaveBeenCalledWith('Sync job failed: Sync service failed', expect.any(String));
     });
 
     it('should create child logger with correct context', async () => {
@@ -214,12 +205,8 @@ describe('SyncProcessor', () => {
 
       await processor.process(job);
 
-      expect(mockLogger.log).toHaveBeenCalledWith(
-        expect.stringContaining('Events: 500 created, 300 updated'),
-      );
-      expect(mockLogger.log).toHaveBeenCalledWith(
-        expect.stringContaining('Markets: 1000 created, 700 updated'),
-      );
+      expect(mockLogger.log).toHaveBeenCalledWith(expect.stringContaining('Events: 500 created, 300 updated'));
+      expect(mockLogger.log).toHaveBeenCalledWith(expect.stringContaining('Markets: 1000 created, 700 updated'));
     });
 
     it('should handle errors without stack trace', async () => {
@@ -236,10 +223,7 @@ describe('SyncProcessor', () => {
 
       await expect(processor.process(job)).rejects.toThrow('Error without stack');
 
-      expect(mockLogger.error).toHaveBeenCalledWith(
-        'Sync job failed: Error without stack',
-        undefined,
-      );
+      expect(mockLogger.error).toHaveBeenCalledWith('Sync job failed: Error without stack', undefined);
     });
   });
 
@@ -285,10 +269,7 @@ describe('SyncProcessor', () => {
       processor.onFailed(job, error);
 
       expect(mockLogger.child).toHaveBeenCalledWith({ jobId: 'job-failed' });
-      expect(mockLogger.error).toHaveBeenCalledWith(
-        'Sync job failed: Job processing failed',
-        error.stack,
-      );
+      expect(mockLogger.error).toHaveBeenCalledWith('Sync job failed: Job processing failed', error.stack);
     });
 
     it('should handle errors without stack trace', () => {
@@ -302,10 +283,7 @@ describe('SyncProcessor', () => {
 
       processor.onFailed(job, error);
 
-      expect(mockLogger.error).toHaveBeenCalledWith(
-        'Sync job failed: Error without stack',
-        undefined,
-      );
+      expect(mockLogger.error).toHaveBeenCalledWith('Sync job failed: Error without stack', undefined);
     });
 
     it('should handle multiple job failures', () => {

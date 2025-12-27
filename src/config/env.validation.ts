@@ -28,9 +28,7 @@ export const envValidationSchema = Joi.object({
   POLYMARKET_ENABLE_REAL_TRADING: Joi.string().valid('true', 'false').default('false'),
   POLYMARKET_RPC_URL: Joi.string().uri().optional(),
   POLYMARKET_USDC_ADDRESS: Joi.string().optional(),
-  POLYMARKET_CLOB_WEBSOCKET_URL: Joi.string()
-    .uri()
-    .default('wss://ws-subscriptions-clob.polymarket.com'),
+  POLYMARKET_CLOB_WEBSOCKET_URL: Joi.string().uri().default('wss://ws-subscriptions-clob.polymarket.com'),
   POLYMARKET_WEBSOCKET_ENABLED: Joi.string().valid('true', 'false').default('true'),
   POLYMARKET_WEBSOCKET_RECONNECT_DELAY: Joi.number().default(5000),
   POLYMARKET_WEBSOCKET_CUSTOM_FEATURES: Joi.string().valid('true', 'false').default('false'),

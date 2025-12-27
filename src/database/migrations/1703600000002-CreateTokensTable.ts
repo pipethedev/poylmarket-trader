@@ -21,9 +21,7 @@ export class CreateTokensTable1703600000002 implements MigrationInterface {
 
     await queryRunner.query(`CREATE INDEX "idx_tokens_token_id" ON "tokens" ("token_id")`);
     await queryRunner.query(`CREATE INDEX "idx_tokens_market_id" ON "tokens" ("market_id")`);
-    await queryRunner.query(
-      `CREATE INDEX "idx_tokens_market_outcome" ON "tokens" ("market_id", "outcome")`,
-    );
+    await queryRunner.query(`CREATE INDEX "idx_tokens_market_outcome" ON "tokens" ("market_id", "outcome")`);
   }
 
   public async down(queryRunner: QueryRunner): Promise<void> {

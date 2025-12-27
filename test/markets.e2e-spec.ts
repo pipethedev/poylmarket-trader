@@ -48,10 +48,7 @@ describe('Markets API (e2e)', () => {
       await dataFactory.createMarket(event.id, { question: 'Market 2?' });
       await dataFactory.createMarket(event.id, { question: 'Market 3?' });
 
-      const response = await request(app.getHttpServer())
-        .get('/markets')
-        .query({ page: 1, limit: 2 })
-        .expect(200);
+      const response = await request(app.getHttpServer()).get('/markets').query({ page: 1, limit: 2 }).expect(200);
 
       expect(response.body.data).toHaveLength(2);
       expect(response.body.meta).toEqual({
@@ -73,10 +70,7 @@ describe('Markets API (e2e)', () => {
         active: false,
       });
 
-      const response = await request(app.getHttpServer())
-        .get('/markets')
-        .query({ active: true })
-        .expect(200);
+      const response = await request(app.getHttpServer()).get('/markets').query({ active: true }).expect(200);
 
       expect(response.body.data).toHaveLength(1);
       expect(response.body.data[0].question).toBe('Active Market');
@@ -91,10 +85,7 @@ describe('Markets API (e2e)', () => {
         question: 'Will ETH flip BTC?',
       });
 
-      const response = await request(app.getHttpServer())
-        .get('/markets')
-        .query({ search: 'BTC' })
-        .expect(200);
+      const response = await request(app.getHttpServer()).get('/markets').query({ search: 'BTC' }).expect(200);
 
       expect(response.body.data.length).toBeGreaterThan(0);
     });
@@ -106,10 +97,7 @@ describe('Markets API (e2e)', () => {
       await dataFactory.createMarket(event1.id, { question: 'Event 1 Market' });
       await dataFactory.createMarket(event2.id, { question: 'Event 2 Market' });
 
-      const response = await request(app.getHttpServer())
-        .get('/markets')
-        .query({ eventId: event1.id })
-        .expect(200);
+      const response = await request(app.getHttpServer()).get('/markets').query({ eventId: event1.id }).expect(200);
 
       expect(response.body.data).toHaveLength(1);
       expect(response.body.data[0].question).toBe('Event 1 Market');
@@ -124,10 +112,7 @@ describe('Markets API (e2e)', () => {
         question: 'Will Ethereum flip Bitcoin?',
       });
 
-      const response = await request(app.getHttpServer())
-        .get('/markets')
-        .query({ search: 'Bitcoin' })
-        .expect(200);
+      const response = await request(app.getHttpServer()).get('/markets').query({ search: 'Bitcoin' }).expect(200);
 
       expect(response.body.data).toHaveLength(2);
     });
@@ -197,20 +182,14 @@ describe('Markets API (e2e)', () => {
       const event = await dataFactory.createEvent();
       await dataFactory.createMarket(event.id);
 
-      const response = await request(app.getHttpServer())
-        .get('/markets')
-        .query({ page: 100, limit: 10 })
-        .expect(200);
+      const response = await request(app.getHttpServer()).get('/markets').query({ page: 100, limit: 10 }).expect(200);
 
       expect(response.body.data).toHaveLength(0);
       expect(response.body.meta.currentPage).toBe(100);
     });
 
     it('should enforce maximum limit for pagination', async () => {
-      const response = await request(app.getHttpServer())
-        .get('/markets')
-        .query({ limit: 1000 })
-        .expect(200);
+      const response = await request(app.getHttpServer()).get('/markets').query({ limit: 1000 }).expect(200);
 
       expect(response.body.meta.perPage).toBeLessThanOrEqual(100);
     });

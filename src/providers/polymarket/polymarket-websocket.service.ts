@@ -44,8 +44,7 @@ export class PolymarketWebSocketService implements OnModuleInit, OnModuleDestroy
     this.logger = logger.setPrefix(LogPrefix.PROVIDER).setContext(PolymarketWebSocketService.name);
     this.baseWsUrl = this.configService.get<string>('polymarket.clobWebSocketUrl')!;
     this.enabled = this.configService.get<boolean>('polymarket.websocketEnabled') ?? true;
-    this.reconnectDelay =
-      this.configService.get<number>('polymarket.websocketReconnectDelay') ?? 5000;
+    this.reconnectDelay = this.configService.get<number>('polymarket.websocketReconnectDelay') ?? 5000;
   }
 
   private getWsUrl(): string {
@@ -77,9 +76,7 @@ export class PolymarketWebSocketService implements OnModuleInit, OnModuleDestroy
 
     this.connectionTimeout = setTimeout(() => {
       if (this.connectionState === 'connecting' && this.ws) {
-        this.logger.error(
-          `WebSocket connection timeout exceeded when trying to connect to ${wsUrl}`,
-        );
+        this.logger.error(`WebSocket connection timeout exceeded when trying to connect to ${wsUrl}`);
         this.connectionState = 'error';
         this.ws.close();
         this.ws = null;
@@ -204,9 +201,7 @@ export class PolymarketWebSocketService implements OnModuleInit, OnModuleDestroy
         return;
       }
 
-      this.logger.log(
-        `Subscribing to ${allTokenIds.length} token IDs from ${markets.length} markets`,
-      );
+      this.logger.log(`Subscribing to ${allTokenIds.length} token IDs from ${markets.length} markets`);
 
       const subscriptionMessage: SubscriptionMessage = {
         type: 'MARKET',

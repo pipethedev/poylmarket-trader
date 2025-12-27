@@ -26,17 +26,11 @@ export class CreateMarketsTable1703600000001 implements MigrationInterface {
       )
     `);
 
-    await queryRunner.query(
-      `CREATE INDEX "idx_markets_polymarket_id" ON "markets" ("polymarket_id")`,
-    );
-    await queryRunner.query(
-      `CREATE INDEX "idx_markets_condition_id" ON "markets" ("condition_id")`,
-    );
+    await queryRunner.query(`CREATE INDEX "idx_markets_polymarket_id" ON "markets" ("polymarket_id")`);
+    await queryRunner.query(`CREATE INDEX "idx_markets_condition_id" ON "markets" ("condition_id")`);
     await queryRunner.query(`CREATE INDEX "idx_markets_event_id" ON "markets" ("event_id")`);
     await queryRunner.query(`CREATE INDEX "idx_markets_active" ON "markets" ("active")`);
-    await queryRunner.query(
-      `CREATE INDEX "idx_markets_event_active" ON "markets" ("event_id", "active")`,
-    );
+    await queryRunner.query(`CREATE INDEX "idx_markets_event_active" ON "markets" ("event_id", "active")`);
   }
 
   public async down(queryRunner: QueryRunner): Promise<void> {

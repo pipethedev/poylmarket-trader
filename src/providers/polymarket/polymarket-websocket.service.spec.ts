@@ -93,11 +93,7 @@ describe('PolymarketWebSocketService', () => {
         return 'wss://test.polymarket.com';
       });
 
-      const disabledService = new PolymarketWebSocketService(
-        configService,
-        marketRepository,
-        mockLogger as any,
-      );
+      const disabledService = new PolymarketWebSocketService(configService, marketRepository, mockLogger as any);
 
       await disabledService.onModuleInit();
 
@@ -129,9 +125,7 @@ describe('PolymarketWebSocketService', () => {
 
       await service.onModuleInit();
 
-      const openHandler = (mockWs.on as jest.Mock).mock.calls.find(
-        (call) => call[0] === 'open',
-      )?.[1];
+      const openHandler = (mockWs.on as jest.Mock).mock.calls.find((call) => call[0] === 'open')?.[1];
 
       expect(openHandler).toBeDefined();
       openHandler();
@@ -143,31 +137,23 @@ describe('PolymarketWebSocketService', () => {
     it('should handle connection error event', async () => {
       await service.onModuleInit();
 
-      const errorHandler = (mockWs.on as jest.Mock).mock.calls.find(
-        (call) => call[0] === 'error',
-      )?.[1];
+      const errorHandler = (mockWs.on as jest.Mock).mock.calls.find((call) => call[0] === 'error')?.[1];
 
       const testError = new Error('Connection failed');
       errorHandler(testError);
 
-      expect(mockLogger.error).toHaveBeenCalledWith(
-        expect.stringContaining('WebSocket error: Connection failed'),
-      );
+      expect(mockLogger.error).toHaveBeenCalledWith(expect.stringContaining('WebSocket error: Connection failed'));
       expect(service.getConnectionState()).toBe('error');
     });
 
     it('should handle connection close event', async () => {
       await service.onModuleInit();
 
-      const closeHandler = (mockWs.on as jest.Mock).mock.calls.find(
-        (call) => call[0] === 'close',
-      )?.[1];
+      const closeHandler = (mockWs.on as jest.Mock).mock.calls.find((call) => call[0] === 'close')?.[1];
 
       closeHandler(1000, Buffer.from('Normal close'));
 
-      expect(mockLogger.warn).toHaveBeenCalledWith(
-        expect.stringContaining('WebSocket closed: code=1000'),
-      );
+      expect(mockLogger.warn).toHaveBeenCalledWith(expect.stringContaining('WebSocket closed: code=1000'));
       expect(service.getConnectionState()).toBe('disconnected');
     });
   });
@@ -179,9 +165,7 @@ describe('PolymarketWebSocketService', () => {
 
       await service.onModuleInit();
 
-      const messageCallback = (mockWs.on as jest.Mock).mock.calls.find(
-        (call) => call[0] === 'message',
-      )?.[1];
+      const messageCallback = (mockWs.on as jest.Mock).mock.calls.find((call) => call[0] === 'message')?.[1];
 
       const testMessage = { event_type: 'price_change', data: 'test' };
       messageCallback(Buffer.from(JSON.stringify(testMessage)));
@@ -197,9 +181,7 @@ describe('PolymarketWebSocketService', () => {
 
       await service.onModuleInit();
 
-      const messageCallback = (mockWs.on as jest.Mock).mock.calls.find(
-        (call) => call[0] === 'message',
-      )?.[1];
+      const messageCallback = (mockWs.on as jest.Mock).mock.calls.find((call) => call[0] === 'message')?.[1];
 
       messageCallback(Buffer.from('PONG'));
 
@@ -210,24 +192,18 @@ describe('PolymarketWebSocketService', () => {
     it('should handle invalid JSON messages', async () => {
       await service.onModuleInit();
 
-      const messageCallback = (mockWs.on as jest.Mock).mock.calls.find(
-        (call) => call[0] === 'message',
-      )?.[1];
+      const messageCallback = (mockWs.on as jest.Mock).mock.calls.find((call) => call[0] === 'message')?.[1];
 
       messageCallback(Buffer.from('invalid json'));
 
-      expect(mockLogger.error).toHaveBeenCalledWith(
-        expect.stringContaining('Failed to parse WebSocket message'),
-      );
+      expect(mockLogger.error).toHaveBeenCalledWith(expect.stringContaining('Failed to parse WebSocket message'));
     });
   });
 
   describe('subscription management', () => {
     beforeEach(async () => {
       await service.onModuleInit();
-      const openHandler = (mockWs.on as jest.Mock).mock.calls.find(
-        (call) => call[0] === 'open',
-      )?.[1];
+      const openHandler = (mockWs.on as jest.Mock).mock.calls.find((call) => call[0] === 'open')?.[1];
       openHandler();
     });
 
@@ -244,9 +220,7 @@ describe('PolymarketWebSocketService', () => {
       ] as any);
 
       await service.onModuleInit();
-      const openHandler = (mockWs.on as jest.Mock).mock.calls.find(
-        (call) => call[0] === 'open',
-      )?.[1];
+      const openHandler = (mockWs.on as jest.Mock).mock.calls.find((call) => call[0] === 'open')?.[1];
       openHandler();
 
       await new Promise((resolve) => setTimeout(resolve, 0));
@@ -326,9 +300,7 @@ describe('PolymarketWebSocketService', () => {
 
     it('should send PING messages periodically', async () => {
       await service.onModuleInit();
-      const openHandler = (mockWs.on as jest.Mock).mock.calls.find(
-        (call) => call[0] === 'open',
-      )?.[1];
+      const openHandler = (mockWs.on as jest.Mock).mock.calls.find((call) => call[0] === 'open')?.[1];
       openHandler();
 
       jest.advanceTimersByTime(10000);
@@ -339,14 +311,10 @@ describe('PolymarketWebSocketService', () => {
 
     it('should stop ping interval on close', async () => {
       await service.onModuleInit();
-      const openHandler = (mockWs.on as jest.Mock).mock.calls.find(
-        (call) => call[0] === 'open',
-      )?.[1];
+      const openHandler = (mockWs.on as jest.Mock).mock.calls.find((call) => call[0] === 'open')?.[1];
       openHandler();
 
-      const closeHandler = (mockWs.on as jest.Mock).mock.calls.find(
-        (call) => call[0] === 'close',
-      )?.[1];
+      const closeHandler = (mockWs.on as jest.Mock).mock.calls.find((call) => call[0] === 'close')?.[1];
       closeHandler(1000, Buffer.from(''));
 
       (mockWs.send as jest.Mock).mockClear();
@@ -365,9 +333,7 @@ describe('PolymarketWebSocketService', () => {
       expect(service.isConnected()).toBe(false);
 
       await service.onModuleInit();
-      const openHandler = (mockWs.on as jest.Mock).mock.calls.find(
-        (call) => call[0] === 'open',
-      )?.[1];
+      const openHandler = (mockWs.on as jest.Mock).mock.calls.find((call) => call[0] === 'open')?.[1];
       openHandler();
 
       expect(service.isConnected()).toBe(true);
@@ -389,9 +355,7 @@ describe('PolymarketWebSocketService', () => {
       jest.useFakeTimers();
 
       await service.onModuleInit();
-      const openHandler = (mockWs.on as jest.Mock).mock.calls.find(
-        (call) => call[0] === 'open',
-      )?.[1];
+      const openHandler = (mockWs.on as jest.Mock).mock.calls.find((call) => call[0] === 'open')?.[1];
       openHandler();
 
       await service.onModuleDestroy();

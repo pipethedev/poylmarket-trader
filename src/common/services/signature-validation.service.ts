@@ -16,9 +16,7 @@ export class SignatureValidationService {
       const isValid = recoveredAddress.toLowerCase() === expectedAddress.toLowerCase();
 
       if (!isValid) {
-        this.logger.warn(
-          `Signature validation failed: recovered ${recoveredAddress}, expected ${expectedAddress}`,
-        );
+        this.logger.warn(`Signature validation failed: recovered ${recoveredAddress}, expected ${expectedAddress}`);
       }
 
       return isValid;

@@ -30,9 +30,7 @@ export class MarketsService {
     private readonly syncService?: SyncService,
     logger?: AppLogger,
   ) {
-    this.logger = (logger || new AppLogger())
-      .setPrefix(LogPrefix.API)
-      .setContext(MarketsService.name);
+    this.logger = (logger || new AppLogger()).setPrefix(LogPrefix.API).setContext(MarketsService.name);
   }
 
   async getMarkets(query: QueryMarketsDto): Promise<MarketListResponseDto> {
@@ -111,9 +109,7 @@ export class MarketsService {
     this.logger.log(`Found ${result.meta.total} markets in database`);
 
     if (result.meta.total === 0 && query.search && this.marketProvider && this.syncService) {
-      this.logger.log(
-        `No markets found in database for search "${query.search}", attempting API fallback`,
-      );
+      this.logger.log(`No markets found in database for search "${query.search}", attempting API fallback`);
 
       try {
         const providerMarkets = await this.marketProvider.getAllMarkets({
@@ -161,9 +157,7 @@ export class MarketsService {
                 await this.syncService.syncMarket(providerMarket, event.id);
               }
             } catch (error) {
-              this.logger.warn(
-                `Failed to sync market ${providerMarket.id} from API: ${(error as Error).message}`,
-              );
+              this.logger.warn(`Failed to sync market ${providerMarket.id} from API: ${(error as Error).message}`);
             }
           }
 
@@ -187,9 +181,7 @@ export class MarketsService {
           return {
             data: retryResult.data.map((market) => ({
               ...this.mapToResponse(market),
-              tokens: (retryTokensMap.get(market.id) || []).map((token) =>
-                this.mapTokenToResponse(token),
-              ),
+              tokens: (retryTokensMap.get(market.id) || []).map((token) => this.mapTokenToResponse(token)),
             })),
             meta: retryResult.meta,
           };
@@ -258,10 +250,7 @@ export class MarketsService {
     return response;
   }
 
-  async getMarketByExternalId(
-    externalId: string,
-    provider = 'polymarket',
-  ): Promise<MarketDetailResponseDto> {
+  async getMarketByExternalId(externalId: string, provider = 'polymarket'): Promise<MarketDetailResponseDto> {
     this.logger.setContextData({ externalId, provider }).log('Fetching market by external ID');
 
     const market = await this.marketRepository.findByExternalId(externalId, provider);

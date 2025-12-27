@@ -104,9 +104,7 @@ export class MarketUpdateHandlerService implements OnModuleInit {
     private readonly syncService?: SyncService,
     logger?: AppLogger,
   ) {
-    this.logger = (logger || new AppLogger())
-      .setPrefix(LogPrefix.PROVIDER)
-      .setContext(MarketUpdateHandlerService.name);
+    this.logger = (logger || new AppLogger()).setPrefix(LogPrefix.PROVIDER).setContext(MarketUpdateHandlerService.name);
   }
 
   onModuleInit(): void {
@@ -143,9 +141,7 @@ export class MarketUpdateHandlerService implements OnModuleInit {
           this.logger.debug(`Unknown event_type: ${message.event_type}`);
       }
     } catch (error) {
-      this.logger.error(
-        `Error handling message (event_type=${message.event_type}): ${(error as Error).message}`,
-      );
+      this.logger.error(`Error handling message (event_type=${message.event_type}): ${(error as Error).message}`);
     }
   }
 
@@ -218,9 +214,7 @@ export class MarketUpdateHandlerService implements OnModuleInit {
     const existingMarket = await this.marketRepository.findOneBy({ conditionId: message.market });
 
     if (!existingMarket) {
-      this.logger.log(
-        `New market ${message.market} not found in database. Attempting to fetch and save...`,
-      );
+      this.logger.log(`New market ${message.market} not found in database. Attempting to fetch and save...`);
 
       if (this.marketProvider && this.syncService) {
         try {
@@ -242,9 +236,7 @@ export class MarketUpdateHandlerService implements OnModuleInit {
           }
 
           if (matchingMarket && matchingEvent) {
-            this.logger.log(
-              `Found market ${message.market} in event ${matchingEvent.id}, syncing...`,
-            );
+            this.logger.log(`Found market ${message.market} in event ${matchingEvent.id}, syncing...`);
 
             let event = await this.eventRepository.findByExternalId(matchingEvent.id);
 
@@ -261,14 +253,10 @@ export class MarketUpdateHandlerService implements OnModuleInit {
             this.logger.warn(`Market ${message.market} not found in provider API events`);
           }
         } catch (error) {
-          this.logger.error(
-            `Failed to sync new market ${message.market}: ${(error as Error).message}`,
-          );
+          this.logger.error(`Failed to sync new market ${message.market}: ${(error as Error).message}`);
         }
       } else {
-        this.logger.warn(
-          `MarketProvider or SyncService not available, cannot auto-sync new market`,
-        );
+        this.logger.warn(`MarketProvider or SyncService not available, cannot auto-sync new market`);
       }
 
       if (message.assets_ids && message.assets_ids.length > 0) {
@@ -379,8 +367,7 @@ export class MarketUpdateHandlerService implements OnModuleInit {
         tokensByMarket.set(token.marketId, existing);
       });
 
-      const marketUpdates: Array<{ id: number; outcomeYesPrice: string; outcomeNoPrice: string }> =
-        [];
+      const marketUpdates: Array<{ id: number; outcomeYesPrice: string; outcomeNoPrice: string }> = [];
       const tokenUpdates: Array<{ id: number; price: string }> = [];
 
       for (const [marketId, { bestBid, bestAsk }] of updates) {

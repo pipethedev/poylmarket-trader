@@ -2,13 +2,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { OrderRepository } from './order.repository';
-import {
-  Order,
-  OrderStatus,
-  OrderSide,
-  OrderType,
-  OrderOutcome,
-} from '@database/entities/order.entity';
+import { Order, OrderStatus, OrderSide, OrderType, OrderOutcome } from '@database/entities/order.entity';
 import { Market } from '@database/entities/market.entity';
 
 describe('OrderRepository', () => {

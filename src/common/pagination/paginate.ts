@@ -13,12 +13,7 @@ export async function paginate<T extends ObjectLiteral>(
   return createPaginationResult(items, total, page, size);
 }
 
-function createPaginationResult<T>(
-  items: T[],
-  totalItems: number,
-  page: number,
-  limit: number,
-): PaginatedResult<T> {
+function createPaginationResult<T>(items: T[], totalItems: number, page: number, limit: number): PaginatedResult<T> {
   const totalPages = Math.ceil(totalItems / limit);
 
   const meta: PaginationMeta = {

@@ -54,8 +54,7 @@ export class PolymarketClobService {
 
     const chainId = this.configService.get<number>('polymarket.chainId') ?? 137;
 
-    this.enableRealTrading =
-      this.configService.get<boolean>('polymarket.enableRealTrading') ?? false;
+    this.enableRealTrading = this.configService.get<boolean>('polymarket.enableRealTrading') ?? false;
 
     this.client = new ClobClient(host, chainId as Chain);
   }
@@ -135,9 +134,7 @@ export class PolymarketClobService {
 
   async placeOrder(params: PlaceOrderParams): Promise<OrderResponse> {
     if (!this.enableRealTrading) {
-      throw new Error(
-        'Real trading is not enabled. Set POLYMARKET_ENABLE_REAL_TRADING=true to enable.',
-      );
+      throw new Error('Real trading is not enabled. Set POLYMARKET_ENABLE_REAL_TRADING=true to enable.');
     }
 
     //Ideally this shouldn't happen in production: So if the request was triggered by the client we use their connected wallet but if not we use the system credentials.
@@ -170,8 +167,7 @@ export class PolymarketClobService {
       this.logger.debug(`CLOB order response: ${JSON.stringify(response)}`);
 
       if (response.error) {
-        const errorMessage =
-          typeof response.error === 'string' ? response.error : JSON.stringify(response.error);
+        const errorMessage = typeof response.error === 'string' ? response.error : JSON.stringify(response.error);
         this.logger.error(`Order placement failed: ${errorMessage}`);
 
         if (errorMessage.includes('invalid signature') || errorMessage.includes('signature')) {
@@ -185,9 +181,7 @@ export class PolymarketClobService {
       }
 
       if (!response.orderID) {
-        this.logger.error(
-          `Order response missing orderID. Full response: ${JSON.stringify(response)}`,
-        );
+        this.logger.error(`Order response missing orderID. Full response: ${JSON.stringify(response)}`);
 
         const responseStr = JSON.stringify(response);
         if (responseStr.includes('error') || responseStr.includes('invalid')) {
@@ -223,15 +217,11 @@ export class PolymarketClobService {
     const chainId = this.configService.get<number>('polymarket.chainId') ?? 137;
 
     if (!privateKey) {
-      throw new Error(
-        'POLYMARKET_WALLET_PRIVATE_KEY is required for server-authenticated CLOB operations',
-      );
+      throw new Error('POLYMARKET_WALLET_PRIVATE_KEY is required for server-authenticated CLOB operations');
     }
 
     if (!funderAddress) {
-      throw new Error(
-        'POLYMARKET_FUNDER_ADDRESS is required for server-authenticated CLOB operations',
-      );
+      throw new Error('POLYMARKET_FUNDER_ADDRESS is required for server-authenticated CLOB operations');
     }
 
     const host = this.configService.get<string>('polymarket.clobApiUrl')!;
@@ -269,14 +259,7 @@ export class PolymarketClobService {
       throw new Error('Failed to obtain API credentials from Polymarket');
     }
 
-    this.authenticatedClient = new ClobClient(
-      host,
-      chainId,
-      wallet,
-      creds,
-      signatureType,
-      checksummedFunderAddress,
-    );
+    this.authenticatedClient = new ClobClient(host, chainId, wallet, creds, signatureType, checksummedFunderAddress);
 
     this.logger.log(
       `Authenticated CLOB client initialized successfully. ` +
@@ -335,14 +318,7 @@ export class PolymarketClobService {
       throw new Error(`Failed to obtain API credentials for wallet ${walletAddress}`);
     }
 
-    const userClient = new ClobClient(
-      host,
-      chainId,
-      signer,
-      creds,
-      signatureType,
-      checksummedFunderAddress,
-    );
+    const userClient = new ClobClient(host, chainId, signer, creds, signatureType, checksummedFunderAddress);
 
     this.userClients.set(walletAddress, userClient);
 
@@ -362,8 +338,7 @@ export class PolymarketClobService {
       const response = await client.cancelOrder({ orderID: orderId });
 
       if (response.error) {
-        const errorMessage =
-          typeof response.error === 'string' ? response.error : JSON.stringify(response.error);
+        const errorMessage = typeof response.error === 'string' ? response.error : JSON.stringify(response.error);
 
         this.logger.error(`Order cancellation failed: ${errorMessage}`);
         return {

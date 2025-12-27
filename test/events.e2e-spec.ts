@@ -55,10 +55,7 @@ describe('Events API (e2e)', () => {
         slug: 'event-3',
       });
 
-      const response = await request(app.getHttpServer())
-        .get('/events')
-        .query({ page: 1, limit: 2 })
-        .expect(200);
+      const response = await request(app.getHttpServer()).get('/events').query({ page: 1, limit: 2 }).expect(200);
 
       expect(response.body.data).toHaveLength(2);
       expect(response.body.meta).toEqual({
@@ -79,10 +76,7 @@ describe('Events API (e2e)', () => {
         active: false,
       });
 
-      const response = await request(app.getHttpServer())
-        .get('/events')
-        .query({ active: true })
-        .expect(200);
+      const response = await request(app.getHttpServer()).get('/events').query({ active: true }).expect(200);
 
       expect(response.body.data).toHaveLength(1);
       expect(response.body.data[0].title).toBe('Active Event');
@@ -116,10 +110,7 @@ describe('Events API (e2e)', () => {
         slug: 'super-bowl',
       });
 
-      const response = await request(app.getHttpServer())
-        .get('/events')
-        .query({ search: 'election' })
-        .expect(200);
+      const response = await request(app.getHttpServer()).get('/events').query({ search: 'election' }).expect(200);
 
       expect(response.body.data).toHaveLength(1);
       expect(response.body.data[0].title).toBe('Presidential Election 2024');
@@ -166,33 +157,21 @@ describe('Events API (e2e)', () => {
       const response = await request(app.getHttpServer()).post('/events/sync').expect(200);
 
       expect(response.body).toHaveProperty('message');
-      expect(response.body.message).toBe(
-        'Sync job has been queued and will be processed in the background',
-      );
+      expect(response.body.message).toBe('Sync job has been queued and will be processed in the background');
     });
 
     it('should accept optional limit parameter', async () => {
-      const response = await request(app.getHttpServer())
-        .post('/events/sync')
-        .query({ limit: 50 })
-        .expect(200);
+      const response = await request(app.getHttpServer()).post('/events/sync').query({ limit: 50 }).expect(200);
 
       expect(response.body).toHaveProperty('message');
-      expect(response.body.message).toBe(
-        'Sync job has been queued and will be processed in the background',
-      );
+      expect(response.body.message).toBe('Sync job has been queued and will be processed in the background');
     });
 
     it('should handle sync with existing events gracefully', async () => {
-      const response = await request(app.getHttpServer())
-        .post('/events/sync')
-        .query({ limit: 10 })
-        .expect(200);
+      const response = await request(app.getHttpServer()).post('/events/sync').query({ limit: 10 }).expect(200);
 
       expect(response.body).toHaveProperty('message');
-      expect(response.body.message).toBe(
-        'Sync job has been queued and will be processed in the background',
-      );
+      expect(response.body.message).toBe('Sync job has been queued and will be processed in the background');
     });
   });
 
@@ -200,20 +179,14 @@ describe('Events API (e2e)', () => {
     it('should handle pagination with page beyond total pages', async () => {
       await dataFactory.createEvent();
 
-      const response = await request(app.getHttpServer())
-        .get('/events')
-        .query({ page: 100, limit: 10 })
-        .expect(200);
+      const response = await request(app.getHttpServer()).get('/events').query({ page: 100, limit: 10 }).expect(200);
 
       expect(response.body.data).toHaveLength(0);
       expect(response.body.meta.currentPage).toBe(100);
     });
 
     it('should enforce maximum limit for pagination', async () => {
-      const response = await request(app.getHttpServer())
-        .get('/events')
-        .query({ limit: 1000 })
-        .expect(200);
+      const response = await request(app.getHttpServer()).get('/events').query({ limit: 1000 }).expect(200);
 
       expect(response.body.meta.perPage).toBeLessThanOrEqual(100);
     });
@@ -228,10 +201,7 @@ describe('Events API (e2e)', () => {
         active: false,
       });
 
-      const response = await request(app.getHttpServer())
-        .get('/events')
-        .query({ active: true })
-        .expect(200);
+      const response = await request(app.getHttpServer()).get('/events').query({ active: true }).expect(200);
 
       expect(response.body.data).toHaveLength(1);
       expect(response.body.data[0].title).toBe('Active Event');

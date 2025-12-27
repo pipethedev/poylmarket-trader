@@ -52,10 +52,7 @@ export abstract class BaseRepository<T extends EntityWithId> {
     return this.repository.findAndCount(options);
   }
 
-  async paginate(
-    queryBuilder: SelectQueryBuilder<T>,
-    options: PaginationOptions,
-  ): Promise<PaginatedResult<T>> {
+  async paginate(queryBuilder: SelectQueryBuilder<T>, options: PaginationOptions): Promise<PaginatedResult<T>> {
     return paginate(queryBuilder, options);
   }
 

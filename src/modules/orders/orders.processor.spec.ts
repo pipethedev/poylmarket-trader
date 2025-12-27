@@ -5,13 +5,7 @@ import { Job } from 'bullmq';
 import { OrdersProcessor } from './orders.processor';
 import { OrderRepository } from '@database/repositories/order.repository';
 import { MarketRepository } from '@database/repositories/market.repository';
-import {
-  Order,
-  OrderStatus,
-  OrderSide,
-  OrderType,
-  OrderOutcome,
-} from '@database/entities/order.entity';
+import { Order, OrderStatus, OrderSide, OrderType, OrderOutcome } from '@database/entities/order.entity';
 import { Market } from '@database/entities/market.entity';
 import { AppLogger } from '@common/logger/app-logger.service';
 import { MARKET_PROVIDER } from '@providers/market-provider.interface';
@@ -147,9 +141,7 @@ describe('OrdersProcessor', () => {
   describe('process', () => {
     it('should successfully fill a limit order', async () => {
       const job = { data: { orderId: 1, attempt: 1 }, id: 'job-1' } as Job;
-      queryRunner.manager.findOne
-        .mockResolvedValueOnce({ ...mockOrder })
-        .mockResolvedValueOnce({ ...mockMarket });
+      queryRunner.manager.findOne.mockResolvedValueOnce({ ...mockOrder }).mockResolvedValueOnce({ ...mockMarket });
       queryRunner.manager.save.mockImplementation((entity, data) => Promise.resolve(data));
 
       await processor.process(job);
@@ -180,9 +172,7 @@ describe('OrdersProcessor', () => {
 
     it('should fail order if market not found', async () => {
       const job = { data: { orderId: 1, attempt: 1 }, id: 'job-1' } as Job;
-      queryRunner.manager.findOne
-        .mockResolvedValueOnce({ ...mockOrder })
-        .mockResolvedValueOnce(null);
+      queryRunner.manager.findOne.mockResolvedValueOnce({ ...mockOrder }).mockResolvedValueOnce(null);
       queryRunner.manager.save.mockImplementation((entity, data) => Promise.resolve(data));
 
       await processor.process(job);
@@ -193,9 +183,7 @@ describe('OrdersProcessor', () => {
     it('should fail order if market is closed', async () => {
       const closedMarket = { ...mockMarket, closed: true };
       const job = { data: { orderId: 1, attempt: 1 }, id: 'job-1' } as Job;
-      queryRunner.manager.findOne
-        .mockResolvedValueOnce({ ...mockOrder })
-        .mockResolvedValueOnce(closedMarket);
+      queryRunner.manager.findOne.mockResolvedValueOnce({ ...mockOrder }).mockResolvedValueOnce(closedMarket);
       queryRunner.manager.save.mockImplementation((entity, data) => Promise.resolve(data));
 
       await processor.process(job);
@@ -206,9 +194,7 @@ describe('OrdersProcessor', () => {
     it('should handle market order', async () => {
       const marketOrder = { ...mockOrder, type: OrderType.MARKET, price: null };
       const job = { data: { orderId: 1, attempt: 1 }, id: 'job-1' } as Job;
-      queryRunner.manager.findOne
-        .mockResolvedValueOnce(marketOrder)
-        .mockResolvedValueOnce({ ...mockMarket });
+      queryRunner.manager.findOne.mockResolvedValueOnce(marketOrder).mockResolvedValueOnce({ ...mockMarket });
       queryRunner.manager.save.mockImplementation((entity, data) => Promise.resolve(data));
 
       await processor.process(job);
@@ -219,9 +205,7 @@ describe('OrdersProcessor', () => {
     it('should handle NO outcome order', async () => {
       const noOutcomeOrder = { ...mockOrder, outcome: 'NO' };
       const job = { data: { orderId: 1, attempt: 1 }, id: 'job-1' } as Job;
-      queryRunner.manager.findOne
-        .mockResolvedValueOnce(noOutcomeOrder)
-        .mockResolvedValueOnce({ ...mockMarket });
+      queryRunner.manager.findOne.mockResolvedValueOnce(noOutcomeOrder).mockResolvedValueOnce({ ...mockMarket });
       queryRunner.manager.save.mockImplementation((entity, data) => Promise.resolve(data));
 
       await processor.process(job);
@@ -232,9 +216,7 @@ describe('OrdersProcessor', () => {
     it('should handle SELL order', async () => {
       const sellOrder = { ...mockOrder, side: 'SELL' };
       const job = { data: { orderId: 1, attempt: 1 }, id: 'job-1' } as Job;
-      queryRunner.manager.findOne
-        .mockResolvedValueOnce(sellOrder)
-        .mockResolvedValueOnce({ ...mockMarket });
+      queryRunner.manager.findOne.mockResolvedValueOnce(sellOrder).mockResolvedValueOnce({ ...mockMarket });
       queryRunner.manager.save.mockImplementation((entity, data) => Promise.resolve(data));
 
       await processor.process(job);

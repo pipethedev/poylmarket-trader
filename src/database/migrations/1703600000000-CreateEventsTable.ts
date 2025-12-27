@@ -21,9 +21,7 @@ export class CreateEventsTable1703600000000 implements MigrationInterface {
       )
     `);
 
-    await queryRunner.query(
-      `CREATE INDEX "idx_events_polymarket_id" ON "events" ("polymarket_id")`,
-    );
+    await queryRunner.query(`CREATE INDEX "idx_events_polymarket_id" ON "events" ("polymarket_id")`);
     await queryRunner.query(`CREATE INDEX "idx_events_start_date" ON "events" ("start_date")`);
     await queryRunner.query(`CREATE INDEX "idx_events_end_date" ON "events" ("end_date")`);
     await queryRunner.query(`CREATE INDEX "idx_events_active" ON "events" ("active")`);

@@ -340,9 +340,7 @@ describe('MarketsService', () => {
     it('should throw MarketNotFoundException if not found', async () => {
       marketRepository.findByExternalId.mockResolvedValue(null);
 
-      await expect(service.getMarketByExternalId('non-existent')).rejects.toThrow(
-        MarketNotFoundException,
-      );
+      await expect(service.getMarketByExternalId('non-existent')).rejects.toThrow(MarketNotFoundException);
     });
   });
 });

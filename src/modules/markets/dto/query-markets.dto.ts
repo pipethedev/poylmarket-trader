@@ -1,13 +1,5 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
-import {
-  IsOptional,
-  IsBoolean,
-  IsInt,
-  Min,
-  IsString,
-  IsNumber,
-  IsDateString,
-} from 'class-validator';
+import { IsOptional, IsBoolean, IsInt, Min, IsString, IsNumber, IsDateString } from 'class-validator';
 import { Type, Transform } from 'class-transformer';
 
 function normalizeBoolean(value: unknown): boolean | undefined {

@@ -9,12 +9,6 @@ import { IdempotencyInterceptor } from './interceptors/idempotency.interceptor';
 @Module({
   imports: [RedisModule, LoggerModule],
   providers: [IdempotencyService, SignatureValidationService, IdempotencyInterceptor],
-  exports: [
-    RedisModule,
-    LoggerModule,
-    IdempotencyService,
-    SignatureValidationService,
-    IdempotencyInterceptor,
-  ],
+  exports: [RedisModule, LoggerModule, IdempotencyService, SignatureValidationService, IdempotencyInterceptor],
 })
 export class CommonModule {}

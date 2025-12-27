@@ -197,9 +197,7 @@ describe('MarketUpdateHandlerService', () => {
 
       await new Promise((resolve) => setTimeout(resolve, 10));
 
-      expect(mockLogger.debug).toHaveBeenCalledWith(
-        expect.stringContaining('Token not found for asset_id'),
-      );
+      expect(mockLogger.debug).toHaveBeenCalledWith(expect.stringContaining('Token not found for asset_id'));
       expect(queryRunner.connect).not.toHaveBeenCalled();
     });
   });
@@ -501,9 +499,7 @@ describe('MarketUpdateHandlerService', () => {
 
       await new Promise((resolve) => setTimeout(resolve, 10));
 
-      expect(mockLogger.warn).toHaveBeenCalledWith(
-        expect.stringContaining('Market unknown-condition not found'),
-      );
+      expect(mockLogger.warn).toHaveBeenCalledWith(expect.stringContaining('Market unknown-condition not found'));
       expect(queryRunner.rollbackTransaction).toHaveBeenCalled();
     });
   });
@@ -521,9 +517,7 @@ describe('MarketUpdateHandlerService', () => {
 
       await new Promise((resolve) => setTimeout(resolve, 10));
 
-      expect(mockLogger.debug).toHaveBeenCalledWith(
-        'Tick size change message received (not processed)',
-      );
+      expect(mockLogger.debug).toHaveBeenCalledWith('Tick size change message received (not processed)');
     });
   });
 
@@ -540,9 +534,7 @@ describe('MarketUpdateHandlerService', () => {
 
       await new Promise((resolve) => setTimeout(resolve, 10));
 
-      expect(mockLogger.debug).toHaveBeenCalledWith(
-        expect.stringContaining('Unknown event_type: unknown_event_type'),
-      );
+      expect(mockLogger.debug).toHaveBeenCalledWith(expect.stringContaining('Unknown event_type: unknown_event_type'));
     });
   });
 
@@ -566,9 +558,7 @@ describe('MarketUpdateHandlerService', () => {
 
       await new Promise((resolve) => setTimeout(resolve, 10));
 
-      expect(mockLogger.error).toHaveBeenCalledWith(
-        expect.stringContaining('Error handling message'),
-      );
+      expect(mockLogger.error).toHaveBeenCalledWith(expect.stringContaining('Error handling message'));
     });
   });
 });

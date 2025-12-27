@@ -73,9 +73,7 @@ export class PolymarketProvider implements MarketProvider {
 
       const response = await this.http.gammaGet<PolymarketGammaEvent>(`/events/${eventId}`);
 
-      let markets = (response.data.markets || []).map((market) =>
-        this.mapMarketToProvider(market, eventId),
-      );
+      let markets = (response.data.markets || []).map((market) => this.mapMarketToProvider(market, eventId));
 
       if (params?.active !== undefined) {
         markets = markets.filter((m) => m.active === params.active);
@@ -155,10 +153,7 @@ export class PolymarketProvider implements MarketProvider {
       try {
         market = (await this.clob.getMarket(order.marketId)) as ClobMarketData;
       } catch (error) {
-        if (
-          error instanceof Error &&
-          (error.message.includes('404') || error.message.includes('not found'))
-        ) {
+        if (error instanceof Error && (error.message.includes('404') || error.message.includes('not found'))) {
           this.logger.error(
             `Market with conditionId ${order.marketId} not found on Polymarket CLOB. The market may have been removed or the conditionId is invalid.`,
           );
@@ -245,9 +240,7 @@ export class PolymarketProvider implements MarketProvider {
 
   async cancelOrder(orderId: string, walletContext?: WalletContext): Promise<CancelResult> {
     try {
-      this.logger
-        .setContextData({ orderId: Number(orderId) })
-        .log(`Cancelling order on Polymarket`);
+      this.logger.setContextData({ orderId: Number(orderId) }).log(`Cancelling order on Polymarket`);
 
       const result = await this.clob.cancelOrder(orderId, walletContext);
 
@@ -414,10 +407,7 @@ export class PolymarketProvider implements MarketProvider {
       });
     }
 
-    return new ProviderException(
-      this.providerName,
-      `${operation} failed: ${(error as Error).message}`,
-    );
+    return new ProviderException(this.providerName, `${operation} failed: ${(error as Error).message}`);
   }
 }
 

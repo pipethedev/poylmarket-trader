@@ -35,10 +35,7 @@ export class EventRepository extends BaseRepository<Event> {
 
     return results.entities.map((event, index) => ({
       ...event,
-      marketCount: parseInt(
-        String((results.raw[index] as { marketCount?: string })?.marketCount ?? '0'),
-        10,
-      ),
+      marketCount: parseInt(String((results.raw[index] as { marketCount?: string })?.marketCount ?? '0'), 10),
     }));
   }
 }

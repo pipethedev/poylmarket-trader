@@ -5,13 +5,7 @@ import { Queue } from 'bullmq';
 import { getQueueToken } from '@nestjs/bullmq';
 import { OrdersService } from './orders.service';
 import { OrderRepository, MarketRepository } from '@database/repositories';
-import {
-  Order,
-  OrderStatus,
-  OrderSide,
-  OrderType,
-  OrderOutcome,
-} from '@database/entities/order.entity';
+import { Order, OrderStatus, OrderSide, OrderType, OrderOutcome } from '@database/entities/order.entity';
 import { Market } from '@database/entities/market.entity';
 import { AppLogger } from '@common/logger/app-logger.service';
 import {
@@ -168,11 +162,7 @@ describe('OrdersService', () => {
 
       expect(result.id).toBe(1);
       expect(queryRunner.commitTransaction).toHaveBeenCalled();
-      expect(ordersQueue.add).toHaveBeenCalledWith(
-        'process-order',
-        expect.any(Object),
-        expect.any(Object),
-      );
+      expect(ordersQueue.add).toHaveBeenCalledWith('process-order', expect.any(Object), expect.any(Object));
     });
 
     it('should throw MarketNotFoundException if market not found', async () => {
@@ -468,9 +458,7 @@ describe('OrdersService', () => {
     it('should throw OrderNotFoundException if order not found', async () => {
       queryRunner.manager.findOne.mockResolvedValue(null);
 
-      await expect(service.updateOrderStatus(999, OrderStatus.FILLED)).rejects.toThrow(
-        OrderNotFoundException,
-      );
+      await expect(service.updateOrderStatus(999, OrderStatus.FILLED)).rejects.toThrow(OrderNotFoundException);
       expect(queryRunner.rollbackTransaction).toHaveBeenCalled();
     });
 

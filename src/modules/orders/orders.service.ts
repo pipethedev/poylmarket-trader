@@ -49,15 +49,11 @@ export class OrdersService {
     private readonly usdcTokenService?: UsdcTokenService,
     logger?: AppLogger,
   ) {
-    this.logger = (logger || new AppLogger())
-      .setPrefix(LogPrefix.ORDER)
-      .setContext(OrdersService.name);
+    this.logger = (logger || new AppLogger()).setPrefix(LogPrefix.ORDER).setContext(OrdersService.name);
   }
 
   async createOrder(dto: CreateOrderDto, idempotencyKey: string): Promise<OrderResponseDto> {
-    this.logger
-      .setContextData({ marketId: dto.marketId, idempotencyKey })
-      .log('Creating new order');
+    this.logger.setContextData({ marketId: dto.marketId, idempotencyKey }).log('Creating new order');
 
     const queryRunner = this.dataSource.createQueryRunner();
     await queryRunner.connect();
@@ -81,17 +77,11 @@ export class OrdersService {
       let userWalletAddress: string | null = null;
       if (dto.walletAddress) {
         if (!dto.signature || !dto.nonce) {
-          throw new InvalidSignatureException(
-            'Signature and nonce are required when wallet address is provided',
-          );
+          throw new InvalidSignatureException('Signature and nonce are required when wallet address is provided');
         }
 
         const message = createOrderMessage(dto, dto.nonce);
-        const isValid = this.signatureValidationService.verifyMessage(
-          message,
-          dto.signature,
-          dto.walletAddress,
-        );
+        const isValid = this.signatureValidationService.verifyMessage(message, dto.signature, dto.walletAddress);
 
         if (!isValid) {
           this.logger.warn(`Invalid signature for wallet ${dto.walletAddress}`);
@@ -106,10 +96,7 @@ export class OrdersService {
         }
       }
 
-      const order = queryRunner.manager.create(
-        Order,
-        OrderFactory.create({ dto, idempotencyKey, userWalletAddress }),
-      );
+      const order = queryRunner.manager.create(Order, OrderFactory.create({ dto, idempotencyKey, userWalletAddress }));
 
       const savedOrder = await queryRunner.manager.save(Order, order);
       await queryRunner.commitTransaction();
@@ -218,9 +205,7 @@ export class OrdersService {
 
       if (order.status === OrderStatus.PROCESSING) {
         if (!hasExternalOrderId) {
-          this.logger.warn(
-            `Order is PROCESSING without externalOrderId, cannot cancel until placement completes`,
-          );
+          this.logger.warn(`Order is PROCESSING without externalOrderId, cannot cancel until placement completes`);
           throw new OrderNotCancellableException(String(id), order.status);
         }
       } else if (!cancellableStatuses.includes(order.status)) {
@@ -229,6 +214,10 @@ export class OrdersService {
       }
 
       const wasQueued = order.status === OrderStatus.QUEUED;
+
+      if (wasQueued) {
+        await this.removeOrderFromQueue(id);
+      }
 
       if (hasExternalOrderId && this.marketProvider?.cancelOrder) {
         try {
@@ -242,10 +231,7 @@ export class OrdersService {
             : undefined;
 
           const cancelResult = await (
-            this.marketProvider.cancelOrder as (
-              orderId: string,
-              walletContext?: WalletContext,
-            ) => Promise<CancelResult>
+            this.marketProvider.cancelOrder as (orderId: string, walletContext?: WalletContext) => Promise<CancelResult>
           )(order.externalOrderId!, walletContext);
 
           if (!cancelResult.success) {
@@ -267,10 +253,6 @@ export class OrdersService {
 
       await queryRunner.commitTransaction();
 
-      if (wasQueued) {
-        await this.removeOrderFromQueue(id);
-      }
-
       this.logger.log('Order cancelled successfully');
       return OrderFactory.toResponse(savedOrder);
     } catch (error) {
@@ -284,9 +266,7 @@ export class OrdersService {
   async updateOrderStatus(
     id: number,
     status: OrderStatus,
-    updates?: Partial<
-      Pick<Order, 'filledQuantity' | 'averageFillPrice' | 'externalOrderId' | 'failureReason'>
-    >,
+    updates?: Partial<Pick<Order, 'filledQuantity' | 'averageFillPrice' | 'externalOrderId' | 'failureReason'>>,
   ): Promise<Order> {
     this.logger.setContextData({ orderId: id, status }).log('Updating order status');
 
@@ -308,8 +288,7 @@ export class OrdersService {
 
       if (updates) {
         if (updates.filledQuantity !== undefined) order.filledQuantity = updates.filledQuantity;
-        if (updates.averageFillPrice !== undefined)
-          order.averageFillPrice = updates.averageFillPrice;
+        if (updates.averageFillPrice !== undefined) order.averageFillPrice = updates.averageFillPrice;
         if (updates.externalOrderId !== undefined) order.externalOrderId = updates.externalOrderId;
         if (updates.failureReason !== undefined) order.failureReason = updates.failureReason;
       }
@@ -377,10 +356,7 @@ export class OrdersService {
         this.logger.log(`Removed ${jobsToRemove.length} job(s) from queue`);
       }
     } catch (error) {
-      this.logger.error(
-        `Failed to remove order from queue: ${(error as Error).message}`,
-        (error as Error).stack,
-      );
+      this.logger.error(`Failed to remove order from queue: ${(error as Error).message}`, (error as Error).stack);
     }
   }
 
@@ -401,9 +377,7 @@ export class OrdersService {
     try {
       const usdcAmount = this.calculateUsdcAmount(dto, market);
 
-      this.logger.log(
-        `Validating USDC requirements for wallet ${userWalletAddress}: Required ${usdcAmount} USDC`,
-      );
+      this.logger.log(`Validating USDC requirements for wallet ${userWalletAddress}: Required ${usdcAmount} USDC`);
 
       const userBalance = await this.usdcTokenService.getBalance(userWalletAddress);
       if (parseFloat(userBalance) < parseFloat(usdcAmount)) {
@@ -425,17 +399,11 @@ export class OrdersService {
         `USDC validation passed for wallet ${userWalletAddress}. Balance: ${userBalance}, Allowance: ${allowance}, Required: ${usdcAmount}`,
       );
     } catch (error) {
-      if (
-        error instanceof InsufficientUsdcBalanceException ||
-        error instanceof InsufficientUsdcAllowanceException
-      ) {
+      if (error instanceof InsufficientUsdcBalanceException || error instanceof InsufficientUsdcAllowanceException) {
         throw error;
       }
 
-      this.logger.error(
-        `Failed to validate USDC requirements: ${(error as Error).message}`,
-        (error as Error).stack,
-      );
+      this.logger.error(`Failed to validate USDC requirements: ${(error as Error).message}`, (error as Error).stack);
       throw error;
     }
   }

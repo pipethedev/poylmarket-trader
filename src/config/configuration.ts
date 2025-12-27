@@ -25,20 +25,14 @@ export default (): AppConfig => ({
     gammaApiUrl: process.env.POLYMARKET_GAMMA_API_URL ?? 'https://gamma-api.polymarket.com',
     walletPrivateKey: process.env.POLYMARKET_WALLET_PRIVATE_KEY,
     funderAddress: process.env.POLYMARKET_FUNDER_ADDRESS,
-    signatureType: process.env.POLYMARKET_SIGNATURE_TYPE
-      ? parseInt(process.env.POLYMARKET_SIGNATURE_TYPE, 10)
-      : 1,
+    signatureType: process.env.POLYMARKET_SIGNATURE_TYPE ? parseInt(process.env.POLYMARKET_SIGNATURE_TYPE, 10) : 1,
     chainId: process.env.POLYMARKET_CHAIN_ID ? parseInt(process.env.POLYMARKET_CHAIN_ID, 10) : 137,
     enableRealTrading: process.env.POLYMARKET_ENABLE_REAL_TRADING === 'true',
     rpcUrl: process.env.POLYMARKET_RPC_URL,
     usdcAddress: process.env.POLYMARKET_USDC_ADDRESS,
-    clobWebSocketUrl:
-      process.env.POLYMARKET_CLOB_WEBSOCKET_URL ?? 'wss://ws-subscriptions-clob.polymarket.com',
+    clobWebSocketUrl: process.env.POLYMARKET_CLOB_WEBSOCKET_URL ?? 'wss://ws-subscriptions-clob.polymarket.com',
     websocketEnabled: process.env.POLYMARKET_WEBSOCKET_ENABLED !== 'false',
-    websocketReconnectDelay: parseInt(
-      process.env.POLYMARKET_WEBSOCKET_RECONNECT_DELAY ?? '5000',
-      10,
-    ),
+    websocketReconnectDelay: parseInt(process.env.POLYMARKET_WEBSOCKET_RECONNECT_DELAY ?? '5000', 10),
     websocketCustomFeaturesEnabled: process.env.POLYMARKET_WEBSOCKET_CUSTOM_FEATURES === 'true',
   },
   scheduler: {
