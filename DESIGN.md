@@ -87,3 +87,4 @@ The codebase includes comprehensive test coverage: 342 tests across 35 test suit
 The application uses Swagger/OpenAPI for API documentation, which is automatically generated from the code. All controllers, DTOs, and endpoints are decorated with Swagger decorators, ensuring the documentation stays in sync with the codebase. The Swagger UI is available at `/api/docs` when the application is running, and a `swagger.json` file is automatically generated during the build process.
 
 ### Some attached screenshot of logs during the sync process.
+<img width="693" height="376" alt="Screenshot 2025-12-27 at 08 45 39" src="https://github.com/user-attachments/assets/310ecb2a-2b4e-4338-aa48-8437b0373dcf" />
