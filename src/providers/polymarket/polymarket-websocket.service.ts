@@ -286,7 +286,7 @@ export class PolymarketWebSocketService implements OnModuleInit, OnModuleDestroy
     const eventType = message.event_type;
 
     if (!eventType) {
-      this.logger.warn('Received message without event_type');
+      // this.logger.warn('Received message without event_type');
       return;
     }
 

@@ -88,6 +88,8 @@ export class MarketUpdateHandlerService implements OnModuleInit {
   private readonly priceUpdateQueue = new Map<number, { bestBid: number; bestAsk: number }>();
   private priceUpdateTimer: NodeJS.Timeout | null = null;
   private readonly PRICE_UPDATE_BATCH_INTERVAL = 100;
+  private isProcessingBatch = false;
+  private pendingBatchScheduled = false;
 
   constructor(
     private readonly wsService: PolymarketWebSocketService,
@@ -326,35 +328,46 @@ export class MarketUpdateHandlerService implements OnModuleInit {
   private updateMarketPrices(marketId: number, bestBid: number, bestAsk: number) {
     this.priceUpdateQueue.set(marketId, { bestBid, bestAsk });
 
-    if (!this.priceUpdateTimer) {
+    if (!this.priceUpdateTimer && !this.isProcessingBatch) {
       this.priceUpdateTimer = setTimeout(() => {
         void this.processPriceUpdateBatch();
       }, this.PRICE_UPDATE_BATCH_INTERVAL);
+    } else if (this.isProcessingBatch && !this.pendingBatchScheduled) {
+      this.pendingBatchScheduled = true;
     }
   }
 
   private async processPriceUpdateBatch(): Promise<void> {
-    if (this.priceUpdateQueue.size === 0) {
-      this.priceUpdateTimer = null;
+    if (this.isProcessingBatch) {
       return;
     }
 
+    if (this.priceUpdateQueue.size === 0) {
+      this.priceUpdateTimer = null;
+      this.isProcessingBatch = false;
+      return;
+    }
+
+    this.isProcessingBatch = true;
     const updates = new Map(this.priceUpdateQueue);
     this.priceUpdateQueue.clear();
     this.priceUpdateTimer = null;
 
     const queryRunner = this.dataSource.createQueryRunner();
     await queryRunner.connect();
-    await queryRunner.startTransaction('READ COMMITTED');
 
     try {
-      const marketIds = Array.from(updates.keys());
+      await queryRunner.startTransaction('READ COMMITTED');
+
+      const marketIds = Array.from(updates.keys()).sort((a, b) => a - b);
       const [markets, tokens] = await Promise.all([
         queryRunner.manager.find(Market, {
           where: { id: In(marketIds) },
+          lock: { mode: 'pessimistic_write' },
         }),
         queryRunner.manager.find(Token, {
           where: { marketId: In(marketIds) },
+          lock: { mode: 'pessimistic_write' },
         }),
       ]);
 
@@ -395,17 +408,19 @@ export class MarketUpdateHandlerService implements OnModuleInit {
         }
       }
 
-      await Promise.all([
-        ...marketUpdates.map((update) =>
-          queryRunner.manager.update(Market, update.id, {
-            outcomeYesPrice: update.outcomeYesPrice,
-            outcomeNoPrice: update.outcomeNoPrice,
-          }),
-        ),
-        ...tokenUpdates.map((update) =>
-          queryRunner.manager.update(Token, update.id, { price: update.price }),
-        ),
-      ]);
+      marketUpdates.sort((a, b) => a.id - b.id);
+      tokenUpdates.sort((a, b) => a.id - b.id);
+
+      for (const update of marketUpdates) {
+        await queryRunner.manager.update(Market, update.id, {
+          outcomeYesPrice: update.outcomeYesPrice,
+          outcomeNoPrice: update.outcomeNoPrice,
+        });
+      }
+
+      for (const update of tokenUpdates) {
+        await queryRunner.manager.update(Token, update.id, { price: update.price });
+      }
 
       await queryRunner.commitTransaction();
       // this.logger.debug(`Batch updated prices for ${updates.size} markets`);
@@ -414,6 +429,16 @@ export class MarketUpdateHandlerService implements OnModuleInit {
       this.logger.error(`Failed to batch update market prices: ${(error as Error).message}`);
     } finally {
       await queryRunner.release();
+      this.isProcessingBatch = false;
+
+      if (this.pendingBatchScheduled && this.priceUpdateQueue.size > 0) {
+        this.pendingBatchScheduled = false;
+        this.priceUpdateTimer = setTimeout(() => {
+          void this.processPriceUpdateBatch();
+        }, this.PRICE_UPDATE_BATCH_INTERVAL);
+      } else {
+        this.pendingBatchScheduled = false;
+      }
     }
   }
 }

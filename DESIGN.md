@@ -18,6 +18,53 @@ Idempotency is implemented using Redis: the idempotency service hashes request c
 
 All orders are pushed to a BullMQ queue for asynchronous processing. This decouples order creation from execution, allowing the API to respond quickly while orders are processed in the background. The queue is configured with 10 retry attempts and exponential backoff (starting at 5 minutes) to avoid overwhelming the system or the provider's API during outages. Before processing each order, I perform a provider health check. if the provider is down, the order throws an error and gets retried later instead of failing immediately. This approach ensures orders eventually get processed when the provider comes back online, while preventing unnecessary load during downtime.
 
+#### Order Flow: UI Dashboard vs Direct API
+
+As a bonus, I built a UI dashboard to interact with the order endpoints. The order flow differs depending on whether users interact through the UI or directly via the API:
+
+**UI Dashboard Flow (Wallet-Connected Users):**
+
+1. **Wallet Connection**: User connects their wallet (MetaMask or WalletConnect) through the UI. The frontend uses wagmi to manage wallet connections and detect the connected address.
+
+2. **Order Creation**:
+   - User fills out the order form (market, side, type, outcome, quantity/amount, price)
+   - For BUY orders, the UI validates USDC balance and allowance before submission
+   - Frontend generates a unique idempotency key (UUID) and a nonce for message signing
+   - User's wallet signs a message containing the order parameters and nonce
+
+3. **Backend Validation**:
+   - API validates the signature matches the wallet address and order parameters
+   - For BUY orders, validates USDC balance and allowance on-chain
+   - Creates order record with status `PENDING` and queues it for processing
+
+4. **Queue Processing**:
+   - Order status changes to `QUEUED`, then `PROCESSING`
+   - For real trading: If user provided a wallet, the system uses their wallet context to place the order on Polymarket. For BUY orders, it transfers USDC from the user's wallet to the funder address first, then executes the order.
+   - For mock trading: Order is simulated and marked as `FILLED` with a simulated fill price
+   - Order status updates to `FILLED` or `FAILED` based on execution result
+
+5. **User Feedback**: UI polls order status and displays real-time updates to the user
+
+**Direct API Testing Flow (No Wallet):**
+
+1. **Order Creation**: Developer sends `POST /orders` with order parameters and `x-idempotency-key` header, but **without** `walletAddress`, `signature`, or `nonce` fields.
+
+2. **Backend Processing**:
+   - Since no wallet is provided, signature validation is skipped
+   - Order is created with `userWalletAddress = null`
+   - Order is queued for processing
+
+3. **Queue Processing**:
+   - Since `userWalletAddress` is null, the USDC transfer step is skipped entirely
+   - System uses the configured server wallet (from `POLYMARKET_WALLET_PRIVATE_KEY`) to execute the order
+   - The funder address (from `POLYMARKET_FUNDER_ADDRESS`) is used directly in the ClobClient configuration
+   - For BUY orders, the funder address must already have sufficient USDC balance (no transfer occurs)
+   - Order executes using system credentials and updates status accordingly
+   
+   **Important**: Unlike the UI flow, there's no USDC transfer step. The order goes straight to the funder address, which must be pre-funded with sufficient USDC to cover BUY orders. This makes it suitable for testing or server-initiated orders where the funder address is managed separately.
+
+This dual-mode approach allows developers to test the API without wallet setup, while the UI provides a complete user experience with wallet integration and on-chain validation.
+
 ### 5. Polling and WebSocket Hybrid Approach
 
 I went with an hybrid approach for data synchronization: WebSocket connections provide real-time price updates and market creation notifications, while scheduled cron jobs (every 15 minutes for events, every 5 minutes for prices) serve as a fallback and ensure data consistency. The WebSocket handles high-frequency updates efficiently, while polling ensures we don't miss updates if the WebSocket disconnects or misses messages. This dual approach balances real-time responsiveness with reliability.

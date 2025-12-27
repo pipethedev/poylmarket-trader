@@ -44,7 +44,7 @@ import { OrdersModule } from '@modules/orders/orders.module';
           synchronize: false,
           migrationsRun: false,
           migrationsTableName: undefined,
-          logging: process.env.NODE_ENV === 'development',
+          logging: false,
           extra: {
             max: 50,
             min: 5,
