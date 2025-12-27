@@ -24,7 +24,9 @@ export class MarketFactory {
   static update(entity: Market, data: ProviderMarket): Market {
     entity.question = data.question;
     entity.description = data.description ?? null;
-    entity.image = data.image ?? null;
+    if (data.image !== undefined) {
+      entity.image = data.image ?? null;
+    }
     entity.conditionId = data.conditionId ?? null;
     entity.outcomeYesPrice = data.outcomeYesPrice;
     entity.outcomeNoPrice = data.outcomeNoPrice;

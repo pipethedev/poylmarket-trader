@@ -44,7 +44,9 @@ export class EventFactory {
     entity.title = data.title;
     entity.description = data.description ?? null;
     entity.slug = data.slug ?? null;
-    entity.image = data.image ?? null;
+    if (data.image !== undefined) {
+      entity.image = data.image ?? null;
+    }
     entity.startDate = data.startDate ?? null;
     entity.endDate = data.endDate ?? null;
     entity.active = data.active;
