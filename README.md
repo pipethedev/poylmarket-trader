@@ -191,3 +191,13 @@ This service integrates with Polymarket's APIs for fetching events, markets, and
   - Real orders placed via CLOB API
   - Requires wallet private key and funder address configuration
   - USDC transfers and approvals handled automatically
+
+## API Documentation
+
+The API documentation is automatically generated using Swagger/OpenAPI and is available at:
+
+**Production**: https://poylmarket-trader.brimble.app/api/docs
+
+**Local Development**: http://localhost:3000/api/docs
+
+The Swagger documentation is generated from code annotations, ensuring it stays in sync with the implementation. All endpoints, request/response DTOs, and authentication requirements are documented with examples and schemas.

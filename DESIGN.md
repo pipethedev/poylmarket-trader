@@ -82,4 +82,8 @@ All entity creation and transformation logic is centralized in factory classes (
 
 The codebase includes comprehensive test coverage: 342 tests across 35 test suites with 83%+ statement coverage. I implemented both unit tests (for services, repositories, factories, utilities) and end-to-end tests (for API endpoints, queue processing, integration scenarios). E2E tests include async queue execution verification, failure path testing, and status transition validation. The test structure uses factories for test data generation and helpers for database cleanup, ensuring tests are isolated and maintainable.
 
+### 9. Auto-Generated API Documentation
+
+The application uses Swagger/OpenAPI for API documentation, which is automatically generated from the code. All controllers, DTOs, and endpoints are decorated with Swagger decorators, ensuring the documentation stays in sync with the codebase. The Swagger UI is available at `/api/docs` when the application is running, and a `swagger.json` file is automatically generated during the build process.
+
 ### Some attached screenshot of logs during the sync process.
