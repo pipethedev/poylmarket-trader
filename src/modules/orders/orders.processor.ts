@@ -9,6 +9,7 @@ import { Market } from '@database/entities/market.entity';
 import { AppLogger, LogPrefix } from '@common/logger/index';
 import type { OrderJobData, MarketProvider, OrderRequest } from '@app-types/index';
 import { MARKET_PROVIDER } from '@providers/market-provider.interface';
+import { UsdcTokenService } from '@common/services/usdc-token.service';
 
 @Processor('orders')
 export class OrdersProcessor extends WorkerHost {
@@ -20,6 +21,7 @@ export class OrdersProcessor extends WorkerHost {
     private readonly dataSource: DataSource,
     @Inject(MARKET_PROVIDER) private readonly marketProvider: MarketProvider,
     private readonly configService: ConfigService,
+    private readonly usdcTokenService: UsdcTokenService,
     logger: AppLogger,
   ) {
     super();
@@ -118,7 +120,8 @@ export class OrdersProcessor extends WorkerHost {
     });
     jobLogger.error(`Job failed: ${error.message}`, error.stack);
 
-    const maxAttempts = job.opts.attempts ?? 3;
+    const maxAttempts = job.opts.attempts ?? 10;
+
     if (job.attemptsMade >= maxAttempts) {
       await this.orderRepository.markAsFailed(
         job.data.orderId,
@@ -185,6 +188,77 @@ export class OrdersProcessor extends WorkerHost {
         };
       }
 
+      const isPolymarketHealthy = await this.marketProvider.healthCheck();
+
+      if (!isPolymarketHealthy) {
+        logger.error('Polymarket API is unavailable. Order will be retried shortly.');
+
+        throw new Error('Polymarket API is currently unavailable. Please try again later.');
+      }
+
+      if (order.userWalletAddress) {
+        logger.log(`Order has user wallet: ${order.userWalletAddress}`);
+
+        try {
+          const usdcAmount = this.calculateUsdcAmount(order, market);
+
+          logger.log(`Calculated USDC amount needed: ${usdcAmount} USDC`);
+
+          const userBalance = await this.usdcTokenService.getBalance(order.userWalletAddress);
+
+          logger.log(`User USDC balance: ${userBalance} USDC`);
+
+          if (parseFloat(userBalance) < parseFloat(usdcAmount)) {
+            return {
+              success: false,
+              reason: `Insufficient USDC balance. Required: ${usdcAmount}, Available: ${userBalance}`,
+            };
+          }
+
+          const allowance = await this.usdcTokenService.getAllowance(order.userWalletAddress);
+
+          logger.log(`User USDC allowance: ${allowance} USDC`);
+
+          if (parseFloat(allowance) < parseFloat(usdcAmount)) {
+            return {
+              success: false,
+              reason: `Insufficient USDC allowance. Required: ${usdcAmount}, Approved: ${allowance}. Please approve USDC spending first.`,
+            };
+          }
+
+          if (order.side === 'BUY' && parseFloat(usdcAmount) > 0) {
+            logger.log(
+              `Transferring ${usdcAmount} USDC from ${order.userWalletAddress} to funder address`,
+            );
+            const txHash = await this.usdcTokenService.transferFromUser(
+              order.userWalletAddress,
+              usdcAmount,
+            );
+            logger.log(`USDC transfer completed. Transaction: ${txHash}`);
+
+            const funderAddress = this.usdcTokenService.getFunderAddress();
+
+            const funderBalance = await this.usdcTokenService.getBalance(funderAddress);
+
+            logger.log(`Funder address USDC balance after transfer: ${funderBalance} USDC`);
+
+            if (parseFloat(funderBalance) < parseFloat(usdcAmount) * 0.99) {
+              logger.warn(
+                `Funder address balance (${funderBalance}) is less than expected (${usdcAmount}). ` +
+                  `This might cause order placement to fail. Please check the funder address balance.`,
+              );
+            }
+          }
+        } catch (transferError) {
+          const errorMessage = (transferError as Error).message;
+          logger.error(`Failed to transfer USDC: ${errorMessage}`);
+          return {
+            success: false,
+            reason: `Failed to transfer USDC: ${errorMessage}`,
+          };
+        }
+      }
+
       logger.log(`Executing real order on Polymarket with conditionId: ${market.conditionId}`);
 
       const orderRequest: OrderRequest = {
@@ -195,16 +269,6 @@ export class OrdersProcessor extends WorkerHost {
         quantity: order.quantity,
         price: order.price ?? undefined,
       };
-
-      if (order.userWalletAddress) {
-        logger.log(`Order has user wallet: ${order.userWalletAddress}`);
-        orderRequest.walletContext = {
-          walletAddress: order.userWalletAddress,
-          signature: '',
-          nonce: '',
-          message: '',
-        };
-      }
 
       try {
         const result = await this.marketProvider.placeOrder!(orderRequest);
@@ -221,9 +285,41 @@ export class OrdersProcessor extends WorkerHost {
         const errorMessage = (placeOrderError as Error).message;
 
         if (
+          errorMessage.includes('invalid price') ||
+          (errorMessage.includes('price') &&
+            errorMessage.includes('min') &&
+            errorMessage.includes('max'))
+        ) {
+          logger.error(
+            `Order placement failed due to invalid price: ${errorMessage}. ` +
+              `Polymarket only accepts prices between 0.01 and 0.99.`,
+          );
+          return {
+            success: false,
+            reason: `Invalid order price: ${errorMessage}. Prices must be between $0.01 and $0.99.`,
+          };
+        }
+
+        if (
+          errorMessage.includes('invalid signature') ||
+          errorMessage.includes('signature') ||
+          errorMessage.includes('authentication') ||
+          errorMessage.includes('Failed to authenticate')
+        ) {
+          logger.error(
+            `Order placement failed due to authentication/signature error: ${errorMessage}. ` +
+              `The server wallet may need to re-authenticate with Polymarket.`,
+          );
+          return {
+            success: false,
+            reason: `Order placement failed: ${errorMessage}. The system will attempt to re-authenticate on the next order.`,
+          };
+        }
+
+        if (
           errorMessage.includes('Market not found') ||
           errorMessage.includes('404') ||
-          errorMessage.includes('invalid')
+          (errorMessage.includes('invalid') && errorMessage.includes('market'))
         ) {
           logger.warn(
             `Market conditionId ${market.conditionId} is invalid. The market may need to be re-synced from Polymarket. ` +
@@ -244,6 +340,50 @@ export class OrdersProcessor extends WorkerHost {
         reason: `Real execution failed: ${(error as Error).message}`,
       };
     }
+  }
+
+  private calculateUsdcAmount(order: Order, market?: Market): string {
+    if (order.side === 'SELL') {
+      return '0';
+    }
+
+    let price: number;
+
+    if (order.type === OrderType.MARKET) {
+      if (!market) {
+        throw new Error('Market data is required to calculate USDC amount for MARKET orders');
+      }
+
+      const marketPrice = order.outcome === 'YES' ? market.outcomeYesPrice : market.outcomeNoPrice;
+
+      if (!marketPrice) {
+        throw new Error(`Market price not available for ${order.outcome} outcome`);
+      }
+
+      price = parseFloat(marketPrice);
+    } else {
+      if (!order.price) {
+        throw new Error('Price is required for LIMIT orders');
+      }
+      price = parseFloat(order.price);
+    }
+
+    const quantity = parseFloat(order.quantity);
+    let amount = price * quantity;
+
+    const minimumOrderValue = 1.0;
+
+    if (amount < minimumOrderValue) {
+      amount = minimumOrderValue;
+    }
+
+    const bufferAmount = amount * 0.01;
+
+    const estimatedGasFeeUsd = 0.0005;
+
+    const totalAmount = amount + bufferAmount + estimatedGasFeeUsd;
+
+    return totalAmount.toFixed(6);
   }
 
   private async simulateExecution(

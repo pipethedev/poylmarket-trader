@@ -31,6 +31,7 @@ export default (): AppConfig => ({
     chainId: process.env.POLYMARKET_CHAIN_ID ? parseInt(process.env.POLYMARKET_CHAIN_ID, 10) : 137,
     enableRealTrading: process.env.POLYMARKET_ENABLE_REAL_TRADING === 'true',
     rpcUrl: process.env.POLYMARKET_RPC_URL,
+    usdcAddress: process.env.POLYMARKET_USDC_ADDRESS,
     clobWebSocketUrl:
       process.env.POLYMARKET_CLOB_WEBSOCKET_URL ?? 'wss://ws-subscriptions-clob.polymarket.com',
     websocketEnabled: process.env.POLYMARKET_WEBSOCKET_ENABLED !== 'false',
@@ -43,9 +44,6 @@ export default (): AppConfig => ({
   scheduler: {
     syncCron: process.env.SYNC_CRON_EXPRESSION ?? '*/15 * * * *',
     priceUpdateCron: process.env.PRICE_UPDATE_CRON_EXPRESSION ?? '*/5 * * * *',
-    syncDaysBack: process.env.SCHEDULER_SYNC_DAYS_BACK
-      ? parseInt(process.env.SCHEDULER_SYNC_DAYS_BACK, 10)
-      : 60,
   },
   cors: {
     origins: process.env.CORS_ORIGINS

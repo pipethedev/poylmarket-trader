@@ -7,6 +7,7 @@ import { IdempotencyInterceptor } from '@common/interceptors/idempotency.interce
 import { Reflector } from '@nestjs/core';
 import { IdempotencyService } from '@common/services/idempotency.service';
 import { AppLogger } from '@common/logger/app-logger.service';
+import { UsdcTokenService } from '@common/services/usdc-token.service';
 
 describe('OrdersController', () => {
   let controller: OrdersController;
@@ -51,6 +52,31 @@ describe('OrdersController', () => {
             getOrder: jest.fn(),
             getOrders: jest.fn(),
             cancelOrder: jest.fn(),
+          },
+        },
+        {
+          provide: UsdcTokenService,
+          useValue: {
+            getBalance: jest.fn().mockResolvedValue('1000.0'),
+            getAllowance: jest.fn().mockResolvedValue('1000.0'),
+            getServerWalletAddress: jest.fn().mockReturnValue('0xserver'),
+            getFunderAddress: jest.fn().mockReturnValue('0xfunder'),
+            getUsdcAddress: jest.fn().mockReturnValue('0xusdc'),
+            getRpcUrl: jest.fn().mockReturnValue('https://polygon-rpc.com'),
+            getServerWalletMaticBalance: jest.fn().mockResolvedValue('0.1'),
+            estimateGasFees: jest.fn().mockResolvedValue({
+              estimatedGasMatic: '0.003',
+              estimatedGasUsd: '0.0003',
+              gasPriceGwei: '55.00',
+              note: 'Gas fees are included in the order amount. This is an estimate.',
+            }),
+            checkFunderApprovals: jest.fn().mockResolvedValue({
+              binaryApproved: true,
+              negRiskApproved: true,
+              binaryAllowance: '1000000',
+              negRiskAllowance: '1000000',
+            }),
+            approveAllPolymarketContracts: jest.fn().mockResolvedValue(['0xtx1', '0xtx2']),
           },
         },
         IdempotencyInterceptor,

@@ -14,6 +14,8 @@ import {
   MarketNotActiveException,
   OptimisticLockException,
   InvalidSignatureException,
+  InsufficientUsdcBalanceException,
+  InsufficientUsdcAllowanceException,
 } from '@common/exceptions/index';
 import { CreateOrderDto } from './dto/create-order.dto';
 import { QueryOrdersDto } from './dto/query-orders.dto';
@@ -21,7 +23,9 @@ import { OrderResponseDto, OrderListResponseDto } from './dto/order-response.dto
 import type { OrderJobData } from '@app-types/index';
 import { PolymarketClobService } from '@providers/polymarket/polymarket-clob.service';
 import { SignatureValidationService } from '@common/services/signature-validation.service';
+import { UsdcTokenService } from '@common/services/usdc-token.service';
 import { createOrderMessage } from '@common/utils/message-utils';
+import { OrderType } from '@database/entities/order.entity';
 
 export type { OrderJobData };
 
@@ -37,6 +41,8 @@ export class OrdersService {
     private readonly signatureValidationService: SignatureValidationService,
     @Optional()
     private readonly clobService?: PolymarketClobService,
+    @Optional()
+    private readonly usdcTokenService?: UsdcTokenService,
     logger?: AppLogger,
   ) {
     this.logger = (logger || new AppLogger())
@@ -90,6 +96,10 @@ export class OrdersService {
 
         userWalletAddress = dto.walletAddress;
         this.logger.log(`Wallet signature validated for ${dto.walletAddress}`);
+
+        if (this.usdcTokenService && dto.side === 'BUY') {
+          await this.validateUsdcRequirements(dto, market, userWalletAddress);
+        }
       }
 
       const order = queryRunner.manager.create(
@@ -284,10 +294,10 @@ export class OrdersService {
       { orderId, attempt: 1 },
       {
         priority: 10,
-        attempts: 3,
+        attempts: 10,
         backoff: {
           type: 'exponential',
-          delay: 1000,
+          delay: 300000,
         },
         removeOnComplete: {
           age: 3600,
@@ -327,5 +337,97 @@ export class OrdersService {
         (error as Error).stack,
       );
     }
+  }
+
+  private async validateUsdcRequirements(
+    dto: CreateOrderDto,
+    market: Market,
+    userWalletAddress: string,
+  ): Promise<void> {
+    if (!this.usdcTokenService) {
+      this.logger.warn('UsdcTokenService not available, skipping USDC validation');
+      return;
+    }
+
+    if (dto.side !== 'BUY') {
+      return;
+    }
+
+    try {
+      const usdcAmount = this.calculateUsdcAmount(dto, market);
+
+      this.logger.log(
+        `Validating USDC requirements for wallet ${userWalletAddress}: Required ${usdcAmount} USDC`,
+      );
+
+      const userBalance = await this.usdcTokenService.getBalance(userWalletAddress);
+      if (parseFloat(userBalance) < parseFloat(usdcAmount)) {
+        this.logger.warn(
+          `Insufficient USDC balance for wallet ${userWalletAddress}. Required: ${usdcAmount}, Available: ${userBalance}`,
+        );
+        throw new InsufficientUsdcBalanceException(usdcAmount, userBalance);
+      }
+
+      const allowance = await this.usdcTokenService.getAllowance(userWalletAddress);
+      if (parseFloat(allowance) < parseFloat(usdcAmount)) {
+        this.logger.warn(
+          `Insufficient USDC allowance for wallet ${userWalletAddress}. Required: ${usdcAmount}, Approved: ${allowance}`,
+        );
+        throw new InsufficientUsdcAllowanceException(usdcAmount, allowance);
+      }
+
+      this.logger.log(
+        `USDC validation passed for wallet ${userWalletAddress}. Balance: ${userBalance}, Allowance: ${allowance}, Required: ${usdcAmount}`,
+      );
+    } catch (error) {
+      if (
+        error instanceof InsufficientUsdcBalanceException ||
+        error instanceof InsufficientUsdcAllowanceException
+      ) {
+        throw error;
+      }
+
+      this.logger.error(
+        `Failed to validate USDC requirements: ${(error as Error).message}`,
+        (error as Error).stack,
+      );
+      throw error;
+    }
+  }
+
+  private calculateUsdcAmount(dto: CreateOrderDto, market: Market): string {
+    let price: number;
+
+    if (dto.type === OrderType.MARKET) {
+      const marketPrice = dto.outcome === 'YES' ? market.outcomeYesPrice : market.outcomeNoPrice;
+
+      if (!marketPrice) {
+        throw new Error(`Market price not available for ${dto.outcome} outcome`);
+      }
+
+      price = parseFloat(marketPrice);
+    } else {
+      if (!dto.price) {
+        throw new Error('Price is required for LIMIT orders');
+      }
+      price = parseFloat(dto.price);
+    }
+
+    const quantity = parseFloat(dto.quantity);
+    let amount = price * quantity;
+
+    const minimumOrderValue = 1.0;
+
+    if (amount < minimumOrderValue) {
+      amount = minimumOrderValue;
+    }
+
+    const bufferAmount = amount * 0.01;
+
+    const estimatedGasFeeUsd = 0.0005;
+
+    const totalAmount = amount + bufferAmount + estimatedGasFeeUsd;
+
+    return totalAmount.toFixed(6);
   }
 }

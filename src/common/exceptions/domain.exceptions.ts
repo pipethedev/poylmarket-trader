@@ -137,3 +137,25 @@ export class InvalidSignatureException extends AppException {
     super('INVALID_SIGNATURE', message, HttpStatus.BAD_REQUEST);
   }
 }
+
+export class InsufficientUsdcBalanceException extends AppException {
+  constructor(required: string, available: string) {
+    super(
+      'INSUFFICIENT_USDC_BALANCE',
+      `Insufficient USDC balance. Required: ${required}, Available: ${available}`,
+      HttpStatus.BAD_REQUEST,
+      { required, available },
+    );
+  }
+}
+
+export class InsufficientUsdcAllowanceException extends AppException {
+  constructor(required: string, approved: string) {
+    super(
+      'INSUFFICIENT_USDC_ALLOWANCE',
+      `Insufficient USDC allowance. Required: ${required}, Approved: ${approved}. Please approve USDC spending first.`,
+      HttpStatus.BAD_REQUEST,
+      { required, approved },
+    );
+  }
+}

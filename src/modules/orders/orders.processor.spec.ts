@@ -15,6 +15,7 @@ import {
 import { Market } from '@database/entities/market.entity';
 import { AppLogger } from '@common/logger/app-logger.service';
 import { MARKET_PROVIDER } from '@providers/market-provider.interface';
+import { UsdcTokenService } from '@common/services/usdc-token.service';
 
 describe('OrdersProcessor', () => {
   let processor: OrdersProcessor;
@@ -121,6 +122,15 @@ describe('OrdersProcessor', () => {
           provide: ConfigService,
           useValue: {
             get: jest.fn().mockReturnValue(false),
+          },
+        },
+        {
+          provide: UsdcTokenService,
+          useValue: {
+            getBalance: jest.fn().mockResolvedValue('1000.0'),
+            getAllowance: jest.fn().mockResolvedValue('1000.0'),
+            transferFromUser: jest.fn().mockResolvedValue('0x123'),
+            getFunderAddress: jest.fn().mockReturnValue('0xfunder'),
           },
         },
         {
@@ -273,11 +283,11 @@ describe('OrdersProcessor', () => {
       expect(orderRepository.markAsFailed).not.toHaveBeenCalled();
     });
 
-    it('should use default 3 attempts when opts.attempts is undefined', async () => {
+    it('should use default 10 attempts when opts.attempts is undefined', async () => {
       const job = {
         data: { orderId: 1 },
         id: 'job-1',
-        attemptsMade: 3,
+        attemptsMade: 10,
         opts: {},
       } as unknown as Job;
       const error = new Error('Processing failed');
@@ -286,7 +296,7 @@ describe('OrdersProcessor', () => {
 
       expect(orderRepository.markAsFailed).toHaveBeenCalledWith(
         1,
-        expect.stringContaining('Processing failed after 3 attempts'),
+        expect.stringContaining('Processing failed after 10 attempts'),
       );
     });
   });

@@ -4,6 +4,7 @@ import { OrdersController } from './orders.controller';
 import { OrdersService } from './orders.service';
 import { OrdersProcessor } from './orders.processor';
 import { ProvidersModule } from '@providers/providers.module';
+import { UsdcTokenService } from '@common/services/usdc-token.service';
 
 @Module({
   imports: [
@@ -17,17 +18,17 @@ import { ProvidersModule } from '@providers/providers.module';
         removeOnFail: {
           age: 86400,
         },
-        attempts: 3,
+        attempts: 10,
         backoff: {
           type: 'exponential',
-          delay: 1000,
+          delay: 300000,
         },
       },
     }),
     ProvidersModule,
   ],
   controllers: [OrdersController],
-  providers: [OrdersService, OrdersProcessor],
+  providers: [OrdersService, OrdersProcessor, UsdcTokenService],
   exports: [OrdersService],
 })
 export class OrdersModule {}

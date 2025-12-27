@@ -26,6 +26,7 @@ export type PolymarketConfig = {
   chainId?: number;
   enableRealTrading?: boolean;
   rpcUrl?: string;
+  usdcAddress?: string;
   clobWebSocketUrl?: string;
   websocketEnabled?: boolean;
   websocketReconnectDelay?: number;
@@ -35,7 +36,6 @@ export type PolymarketConfig = {
 export type SchedulerConfig = {
   syncCron: string;
   priceUpdateCron: string;
-  syncDaysBack: number;
 };
 
 export type CorsConfig = {

@@ -178,7 +178,9 @@ export class PolymarketProvider implements MarketProvider {
         throw new Error(`Token for ${order.outcome} outcome not found in market ${order.marketId}`);
       }
 
-      const tickSizeData = await this.clob.getTickSize(token.token_id);
+      const tickSize = await this.clob.getTickSize(token.token_id);
+
+      const negRisk = market.neg_risk ?? false;
 
       let orderPrice: number;
       if (order.type === 'MARKET') {
@@ -194,13 +196,32 @@ export class PolymarketProvider implements MarketProvider {
 
       const useUserWallet = !!walletContext?.walletAddress;
 
+      const requestedSize = parseFloat(order.quantity);
+
+      const totalOrderValue = requestedSize * orderPrice;
+
+      const minimumOrderValue = 1.0;
+
+      let finalSize = requestedSize;
+      if (totalOrderValue < minimumOrderValue) {
+        finalSize = Math.ceil(minimumOrderValue / orderPrice);
+        this.logger.warn(
+          `Order value ($${totalOrderValue.toFixed(4)}) is below minimum ($${minimumOrderValue}). ` +
+            `Adjusting size from ${requestedSize} to ${finalSize} shares to meet minimum order value.`,
+        );
+      }
+
+      this.logger.log(
+        `Placing order: ${order.side} ${finalSize} @ ${orderPrice} for token ${token.token_id}, negRisk: ${negRisk}, tickSize: ${tickSize}`,
+      );
+
       const response = await this.clob.placeOrder({
         tokenId: token.token_id,
         price: orderPrice,
         side: order.side,
-        size: parseFloat(order.quantity),
-        tickSize: tickSizeData,
-        negRisk: market.neg_risk ?? false,
+        size: finalSize,
+        tickSize: tickSize,
+        negRisk: negRisk,
         walletContext: useUserWallet ? walletContext : undefined,
       });
 

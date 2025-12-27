@@ -408,7 +408,7 @@ export class MarketUpdateHandlerService implements OnModuleInit {
       ]);
 
       await queryRunner.commitTransaction();
-      this.logger.debug(`Batch updated prices for ${updates.size} markets`);
+      // this.logger.debug(`Batch updated prices for ${updates.size} markets`);
     } catch (error) {
       await queryRunner.rollbackTransaction();
       this.logger.error(`Failed to batch update market prices: ${(error as Error).message}`);

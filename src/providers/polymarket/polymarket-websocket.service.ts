@@ -290,7 +290,7 @@ export class PolymarketWebSocketService implements OnModuleInit, OnModuleDestroy
       return;
     }
 
-    this.logger.debug(`Received message: event_type=${eventType}`);
+    // this.logger.debug(`Received message: event_type=${eventType}`);
 
     if (this.onMessage) {
       this.onMessage(message);

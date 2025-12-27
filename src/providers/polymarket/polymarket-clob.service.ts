@@ -11,6 +11,7 @@ import {
 } from '@polymarket/clob-client';
 import { Wallet } from '@ethersproject/wallet';
 import { JsonRpcProvider } from '@ethersproject/providers';
+import { getAddress } from '@ethersproject/address';
 import type { WalletContext } from '@app-types/index';
 
 export interface PaginationPayload {
@@ -139,14 +140,14 @@ export class PolymarketClobService {
       );
     }
 
-    //Ideally this shouldn't happen in production: So if the request was triggered by the client we use their connected wallet but if not we use the system credentials. But it's a good fallback for testing.
+    //Ideally this shouldn't happen in production: So if the request was triggered by the client we use their connected wallet but if not we use the system credentials.
     const client = params.walletContext?.walletAddress
       ? await this.getUserClient(params.walletContext.walletAddress)
       : await this.getAuthenticatedClient();
 
     try {
       this.logger.log(
-        `Placing order: ${params.side} ${params.size} @ ${params.price} for token ${params.tokenId}`,
+        `Placing order: ${params.side} ${params.size} @ ${params.price} for token ${params.tokenId}, negRisk: ${params.negRisk}`,
       );
 
       const orderArgs = {
@@ -165,6 +166,39 @@ export class PolymarketClobService {
         },
         OrderType.GTC,
       );
+
+      this.logger.debug(`CLOB order response: ${JSON.stringify(response)}`);
+
+      if (response.error) {
+        const errorMessage =
+          typeof response.error === 'string' ? response.error : JSON.stringify(response.error);
+        this.logger.error(`Order placement failed: ${errorMessage}`);
+
+        if (errorMessage.includes('invalid signature') || errorMessage.includes('signature')) {
+          this.logger.warn(
+            'Invalid signature detected. Clearing cached authenticated client to force re-authentication.',
+          );
+          this.authenticatedClient = null;
+        }
+
+        throw new Error(`Failed to place order: ${errorMessage}`);
+      }
+
+      if (!response.orderID) {
+        this.logger.error(
+          `Order response missing orderID. Full response: ${JSON.stringify(response)}`,
+        );
+
+        const responseStr = JSON.stringify(response);
+        if (responseStr.includes('error') || responseStr.includes('invalid')) {
+          this.logger.warn(
+            'Invalid signature detected. Clearing cached authenticated client to force re-authentication.',
+          );
+          this.authenticatedClient = null;
+        }
+
+        throw new Error('Order placement failed: No order ID returned from Polymarket');
+      }
 
       this.logger.log(`Order placed successfully: ${response.orderID}`);
 
@@ -203,11 +237,37 @@ export class PolymarketClobService {
     const host = this.configService.get<string>('polymarket.clobApiUrl')!;
     const wallet = new Wallet(privateKey);
 
-    this.logger.log('Initializing authenticated CLOB client...');
+    const checksummedFunderAddress = getAddress(funderAddress);
+
+    this.logger.log(
+      `Initializing authenticated CLOB client... Wallet: ${wallet.address}, Funder: ${checksummedFunderAddress}, SignatureType: ${signatureType}`,
+    );
 
     const tempClient = new ClobClient(host, chainId, wallet);
 
-    const creds: ApiKeyCreds = await tempClient.createOrDeriveApiKey();
+    let creds: ApiKeyCreds;
+    try {
+      creds = await tempClient.createOrDeriveApiKey();
+      this.logger.log('API key created/derived successfully');
+    } catch (error) {
+      const errorMessage = (error as Error).message;
+      this.logger.error(`Failed to create or derive API key: ${errorMessage}`);
+
+      if (errorMessage.includes('signature') || errorMessage.includes('Could not create api key')) {
+        throw new Error(
+          `Failed to authenticate with Polymarket: ${errorMessage}. ` +
+            `Please verify that POLYMARKET_WALLET_PRIVATE_KEY is correct and the wallet has sufficient MATIC for gas fees.`,
+        );
+      }
+
+      throw new Error(`Failed to create API key for CLOB authentication: ${errorMessage}`);
+    }
+
+    // Validate that we got credentials
+    if (!creds) {
+      this.logger.error('No API credentials received from createOrDeriveApiKey');
+      throw new Error('Failed to obtain API credentials from Polymarket');
+    }
 
     this.authenticatedClient = new ClobClient(
       host,
@@ -215,10 +275,13 @@ export class PolymarketClobService {
       wallet,
       creds,
       signatureType,
-      funderAddress,
+      checksummedFunderAddress,
     );
 
-    this.logger.log('Authenticated CLOB client initialized successfully');
+    this.logger.log(
+      `Authenticated CLOB client initialized successfully. ` +
+        `Wallet: ${wallet.address}, Funder: ${funderAddress}, SignatureType: ${signatureType}, ChainId: ${chainId}`,
+    );
 
     return this.authenticatedClient;
   }
@@ -240,10 +303,11 @@ export class PolymarketClobService {
     const funderAddress = this.configService.get<string>('polymarket.funderAddress');
     const host = this.configService.get<string>('polymarket.clobApiUrl')!;
 
+    const checksummedFunderAddress = funderAddress ? getAddress(funderAddress) : undefined;
+
     this.logger.log(`Creating ClobClient for user wallet: ${walletAddress}`);
 
     const provider = new JsonRpcProvider(rpcUrl);
-
     const signer = provider.getSigner(walletAddress);
 
     const tempClient = new ClobClient(host, chainId, signer);
@@ -251,16 +315,34 @@ export class PolymarketClobService {
     let creds: ApiKeyCreds;
     try {
       creds = await tempClient.createOrDeriveApiKey();
+      this.logger.log(`API key created/derived successfully for wallet ${walletAddress}`);
     } catch (error) {
-      this.logger.error(
-        `Failed to create API key for wallet ${walletAddress}: ${(error as Error).message}`,
-      );
-      throw new Error(
-        `Failed to authenticate wallet ${walletAddress}: ${(error as Error).message}`,
-      );
+      const errorMessage = (error as Error).message;
+      this.logger.error(`Failed to create API key for wallet ${walletAddress}: ${errorMessage}`);
+
+      if (errorMessage.includes('signature') || errorMessage.includes('Could not create api key')) {
+        throw new Error(
+          `Failed to authenticate wallet ${walletAddress}: ${errorMessage}. ` +
+            `Please verify the wallet is connected correctly and has sufficient MATIC for gas fees.`,
+        );
+      }
+
+      throw new Error(`Failed to authenticate wallet ${walletAddress}: ${errorMessage}`);
     }
 
-    const userClient = new ClobClient(host, chainId, signer, creds, signatureType, funderAddress);
+    if (!creds) {
+      this.logger.error(`No API credentials received for wallet ${walletAddress}`);
+      throw new Error(`Failed to obtain API credentials for wallet ${walletAddress}`);
+    }
+
+    const userClient = new ClobClient(
+      host,
+      chainId,
+      signer,
+      creds,
+      signatureType,
+      checksummedFunderAddress,
+    );
 
     this.userClients.set(walletAddress, userClient);
 
