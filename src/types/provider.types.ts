@@ -3,12 +3,15 @@ export type EventQueryParams = {
   offset?: number;
   active?: boolean;
   slug?: string;
+  archived?: boolean;
   closed?: boolean;
   featured?: boolean;
   startDateMin?: string;
   startDateMax?: string;
   endDateMin?: string;
   endDateMax?: string;
+  order?: 'volume' | 'liquidity' | 'createdAt' | 'updatedAt';
+  ascending?: boolean;
 };
 
 export type MarketQueryParams = {

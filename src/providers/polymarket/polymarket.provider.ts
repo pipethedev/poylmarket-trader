@@ -39,17 +39,23 @@ export class PolymarketProvider implements MarketProvider {
     try {
       this.logger.debug('Fetching events from Gamma API');
 
+      const queryParams = Object.assign(
+        {},
+        params?.limit !== undefined && { limit: params.limit },
+        params?.offset !== undefined && { offset: params.offset },
+        params?.active !== undefined && { active: params.active },
+        params?.archived !== undefined && { archived: params.archived },
+        params?.closed !== undefined && { closed: params.closed },
+        params?.order !== undefined && { order: params.order },
+        params?.ascending !== undefined && { ascending: params.ascending },
+        params?.startDateMin !== undefined && { start_date_min: params.startDateMin },
+        params?.startDateMax !== undefined && { start_date_max: params.startDateMax },
+        params?.endDateMin !== undefined && { end_date_min: params.endDateMin },
+        params?.endDateMax !== undefined && { end_date_max: params.endDateMax },
+      );
+
       const response = await this.http.gammaGet<PolymarketGammaEvent[]>('/events', {
-        params: {
-          limit: params?.limit,
-          offset: params?.offset,
-          active: params?.active,
-          closed: params?.closed,
-          start_date_min: params?.startDateMin,
-          start_date_max: params?.startDateMax,
-          end_date_min: params?.endDateMin,
-          end_date_max: params?.endDateMax,
-        },
+        params: queryParams,
       });
 
       this.logger.log(`Fetched ${response.data.length} events`);
@@ -59,15 +65,28 @@ export class PolymarketProvider implements MarketProvider {
     }
   }
 
-  async getMarkets(eventId: string, _params?: MarketQueryParams): Promise<ProviderMarket[]> {
+  async getMarkets(eventId: string, params?: MarketQueryParams): Promise<ProviderMarket[]> {
     try {
       this.logger.setContextData({ eventId }).debug('Fetching markets for event from Gamma API');
 
       const response = await this.http.gammaGet<PolymarketGammaEvent>(`/events/${eventId}`);
 
-      const markets = response.data.markets || [];
+      let markets = (response.data.markets || []).map((market) =>
+        this.mapMarketToProvider(market, eventId),
+      );
+
+      if (params?.active !== undefined) {
+        markets = markets.filter((m) => m.active === params.active);
+      }
+      if (params?.offset) {
+        markets = markets.slice(params.offset);
+      }
+      if (params?.limit) {
+        markets = markets.slice(0, params.limit);
+      }
+
       this.logger.log(`Fetched ${markets.length} markets for event ${eventId}`);
-      return markets.map((market) => this.mapMarketToProvider(market, eventId));
+      return markets;
     } catch (error) {
       throw this.handleError(error, 'getMarkets');
     }

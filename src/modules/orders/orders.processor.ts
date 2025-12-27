@@ -36,23 +36,25 @@ export class OrdersProcessor extends WorkerHost {
 
     const queryRunner = this.dataSource.createQueryRunner();
     await queryRunner.connect();
-    await queryRunner.startTransaction('SERIALIZABLE');
+
+    await queryRunner.startTransaction('READ COMMITTED');
 
     try {
       const order = await queryRunner.manager.findOne(Order, {
         where: { id: orderId },
-        lock: { mode: 'pessimistic_write' },
       });
 
       if (!order) {
         jobLogger.warn('Order not found, skipping');
         await queryRunner.rollbackTransaction();
+        await queryRunner.release();
         return;
       }
 
       if (!this.isProcessable(order)) {
         jobLogger.log(`Order not processable (status: ${order.status}), skipping`);
         await queryRunner.rollbackTransaction();
+        await queryRunner.release();
         return;
       }
 
@@ -61,7 +63,6 @@ export class OrdersProcessor extends WorkerHost {
 
       const market = await queryRunner.manager.findOne(Market, {
         where: { id: order.marketId },
-        lock: { mode: 'pessimistic_read' },
       });
 
       if (!market) {

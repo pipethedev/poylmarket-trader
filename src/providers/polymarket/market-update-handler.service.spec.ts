@@ -80,6 +80,7 @@ describe('MarketUpdateHandlerService', () => {
           useValue: {
             findOneBy: jest.fn(),
             update: jest.fn(),
+            updateBy: jest.fn(),
           },
         },
         {
@@ -168,7 +169,7 @@ describe('MarketUpdateHandlerService', () => {
       const messageHandler = (wsService.setMessageHandler as jest.Mock).mock.calls[0][0];
       await messageHandler(bookMessage);
 
-      await new Promise((resolve) => setTimeout(resolve, 10));
+      await new Promise((resolve) => setTimeout(resolve, 150));
 
       expect(tokenRepository.findByTokenId).toHaveBeenCalledWith('token-123');
       expect(queryRunner.manager.update).toHaveBeenCalledWith(Market, 1, {
@@ -233,7 +234,7 @@ describe('MarketUpdateHandlerService', () => {
       const messageHandler = (wsService.setMessageHandler as jest.Mock).mock.calls[0][0];
       await messageHandler(priceChangeMessage);
 
-      await new Promise((resolve) => setTimeout(resolve, 10));
+      await new Promise((resolve) => setTimeout(resolve, 150));
 
       expect(tokenRepository.findByTokenId).toHaveBeenCalledWith('token-123');
       expect(queryRunner.release).toHaveBeenCalled();
@@ -263,9 +264,10 @@ describe('MarketUpdateHandlerService', () => {
       const messageHandler = (wsService.setMessageHandler as jest.Mock).mock.calls[0][0];
       await messageHandler(priceChangeMessage);
 
-      await new Promise((resolve) => setTimeout(resolve, 10));
+      await new Promise((resolve) => setTimeout(resolve, 150));
 
-      expect(queryRunner.release).toHaveBeenCalled();
+      expect(queryRunner.connect).not.toHaveBeenCalled();
+      expect(tokenRepository.findByTokenId).toHaveBeenCalledWith('unknown-token');
     });
   });
 
@@ -290,14 +292,17 @@ describe('MarketUpdateHandlerService', () => {
 
       await new Promise((resolve) => setTimeout(resolve, 10));
 
-      expect(marketRepository.update).toHaveBeenCalledWith(1, {
-        metadata: {
-          lastTradePrice: '0.68',
-          lastTradeSize: '100',
-          lastTradeSide: 'BUY',
-          lastTradeTimestamp: '2024-01-01T00:00:00Z',
+      expect(marketRepository.updateBy).toHaveBeenCalledWith(
+        { id: 1 },
+        {
+          metadata: {
+            lastTradePrice: '0.68',
+            lastTradeSize: '100',
+            lastTradeSide: 'BUY',
+            lastTradeTimestamp: '2024-01-01T00:00:00Z',
+          },
         },
-      });
+      );
     });
 
     it('should skip if token not found', async () => {

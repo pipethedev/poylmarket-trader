@@ -1,5 +1,5 @@
 import { Injectable, OnModuleInit, Inject, Optional } from '@nestjs/common';
-import { DataSource } from 'typeorm';
+import { DataSource, In } from 'typeorm';
 import { MarketRepository, TokenRepository, EventRepository } from '@database/repositories/index';
 import { Market } from '@database/entities/market.entity';
 import { Token, TokenOutcome } from '@database/entities/token.entity';
@@ -85,6 +85,9 @@ interface MarketResolvedMessage {
 @Injectable()
 export class MarketUpdateHandlerService implements OnModuleInit {
   private readonly logger: AppLogger;
+  private readonly priceUpdateQueue = new Map<number, { bestBid: number; bestAsk: number }>();
+  private priceUpdateTimer: NodeJS.Timeout | null = null;
+  private readonly PRICE_UPDATE_BATCH_INTERVAL = 100;
 
   constructor(
     private readonly wsService: PolymarketWebSocketService,
@@ -155,30 +158,23 @@ export class MarketUpdateHandlerService implements OnModuleInit {
     const bestAsk = message.asks.length > 0 ? parseFloat(message.asks[0].price) : 0;
 
     if (bestBid > 0 || bestAsk > 0) {
-      await this.updateMarketPrices(token.marketId, bestBid, bestAsk);
+      this.updateMarketPrices(token.marketId, bestBid, bestAsk);
     }
   }
 
   private async handlePriceChangeMessage(message: PriceChangeMessage): Promise<void> {
-    const queryRunner = this.dataSource.createQueryRunner();
-    await queryRunner.connect();
-
-    try {
-      for (const priceChange of message.price_changes) {
-        const token = await this.tokenRepository.findByTokenId(priceChange.asset_id);
-        if (!token) {
-          continue;
-        }
-
-        const bestBid = parseFloat(priceChange.best_bid) || 0;
-        const bestAsk = parseFloat(priceChange.best_ask) || 0;
-
-        if (bestBid > 0 || bestAsk > 0) {
-          await this.updateMarketPrices(token.marketId, bestBid, bestAsk);
-        }
+    for (const priceChange of message.price_changes) {
+      const token = await this.tokenRepository.findByTokenId(priceChange.asset_id);
+      if (!token) {
+        continue;
       }
-    } finally {
-      await queryRunner.release();
+
+      const bestBid = parseFloat(priceChange.best_bid) || 0;
+      const bestAsk = parseFloat(priceChange.best_ask) || 0;
+
+      if (bestBid > 0 || bestAsk > 0) {
+        this.updateMarketPrices(token.marketId, bestBid, bestAsk);
+      }
     }
   }
 
@@ -196,7 +192,7 @@ export class MarketUpdateHandlerService implements OnModuleInit {
       metadata.lastTradeSide = message.side;
       metadata.lastTradeTimestamp = message.timestamp;
 
-      await this.marketRepository.update(market.id, { metadata });
+      await this.marketRepository.updateBy({ id: market.id }, { metadata });
     }
   }
 
@@ -210,7 +206,7 @@ export class MarketUpdateHandlerService implements OnModuleInit {
     const bestAsk = parseFloat(message.best_ask) || 0;
 
     if (bestBid > 0 || bestAsk > 0) {
-      await this.updateMarketPrices(token.marketId, bestBid, bestAsk);
+      this.updateMarketPrices(token.marketId, bestBid, bestAsk);
     }
   }
 
@@ -288,12 +284,12 @@ export class MarketUpdateHandlerService implements OnModuleInit {
 
     const queryRunner = this.dataSource.createQueryRunner();
     await queryRunner.connect();
-    await queryRunner.startTransaction();
+
+    await queryRunner.startTransaction('READ COMMITTED');
 
     try {
       const market = await queryRunner.manager.findOne(Market, {
         where: { conditionId: message.market },
-        lock: { mode: 'pessimistic_write' },
       });
 
       if (!market) {
@@ -327,54 +323,95 @@ export class MarketUpdateHandlerService implements OnModuleInit {
     }
   }
 
-  private async updateMarketPrices(
-    marketId: number,
-    bestBid: number,
-    bestAsk: number,
-  ): Promise<void> {
+  private updateMarketPrices(marketId: number, bestBid: number, bestAsk: number) {
+    this.priceUpdateQueue.set(marketId, { bestBid, bestAsk });
+
+    if (!this.priceUpdateTimer) {
+      this.priceUpdateTimer = setTimeout(() => {
+        void this.processPriceUpdateBatch();
+      }, this.PRICE_UPDATE_BATCH_INTERVAL);
+    }
+  }
+
+  private async processPriceUpdateBatch(): Promise<void> {
+    if (this.priceUpdateQueue.size === 0) {
+      this.priceUpdateTimer = null;
+      return;
+    }
+
+    const updates = new Map(this.priceUpdateQueue);
+    this.priceUpdateQueue.clear();
+    this.priceUpdateTimer = null;
+
     const queryRunner = this.dataSource.createQueryRunner();
     await queryRunner.connect();
-    await queryRunner.startTransaction();
+    await queryRunner.startTransaction('READ COMMITTED');
 
     try {
-      const market = await queryRunner.manager.findOne(Market, {
-        where: { id: marketId },
-        lock: { mode: 'pessimistic_write' },
+      const marketIds = Array.from(updates.keys());
+      const [markets, tokens] = await Promise.all([
+        queryRunner.manager.find(Market, {
+          where: { id: In(marketIds) },
+        }),
+        queryRunner.manager.find(Token, {
+          where: { marketId: In(marketIds) },
+        }),
+      ]);
+
+      const marketMap = new Map(markets.map((m) => [m.id, m]));
+      const tokensByMarket = new Map<number, Token[]>();
+      tokens.forEach((token) => {
+        const existing = tokensByMarket.get(token.marketId) || [];
+        existing.push(token);
+        tokensByMarket.set(token.marketId, existing);
       });
 
-      if (!market) {
-        await queryRunner.rollbackTransaction();
-        return;
+      const marketUpdates: Array<{ id: number; outcomeYesPrice: string; outcomeNoPrice: string }> =
+        [];
+      const tokenUpdates: Array<{ id: number; price: string }> = [];
+
+      for (const [marketId, { bestBid, bestAsk }] of updates) {
+        const market = marketMap.get(marketId);
+        if (!market) continue;
+
+        const marketTokens = tokensByMarket.get(marketId) || [];
+        const yesToken = marketTokens.find((t) => t.outcome === TokenOutcome.YES);
+        const noToken = marketTokens.find((t) => t.outcome === TokenOutcome.NO);
+
+        const yesPrice = bestAsk > 0 ? bestAsk.toFixed(8) : market.outcomeYesPrice;
+        const noPrice = bestBid > 0 ? (1 - bestBid).toFixed(8) : market.outcomeNoPrice;
+
+        marketUpdates.push({
+          id: marketId,
+          outcomeYesPrice: yesPrice,
+          outcomeNoPrice: noPrice,
+        });
+
+        if (yesToken) {
+          tokenUpdates.push({ id: yesToken.id, price: yesPrice });
+        }
+        if (noToken) {
+          tokenUpdates.push({ id: noToken.id, price: noPrice });
+        }
       }
 
-      const tokens = await queryRunner.manager.find(Token, {
-        where: { marketId },
-        lock: { mode: 'pessimistic_write' },
-      });
-
-      const yesToken = tokens.find((t) => t.outcome === TokenOutcome.YES);
-      const noToken = tokens.find((t) => t.outcome === TokenOutcome.NO);
-
-      const yesPrice = bestAsk > 0 ? bestAsk.toFixed(8) : market.outcomeYesPrice;
-      const noPrice = bestBid > 0 ? (1 - bestBid).toFixed(8) : market.outcomeNoPrice;
-
-      await queryRunner.manager.update(Market, marketId, {
-        outcomeYesPrice: yesPrice,
-        outcomeNoPrice: noPrice,
-      });
-
-      if (yesToken) {
-        await queryRunner.manager.update(Token, yesToken.id, { price: yesPrice });
-      }
-      if (noToken) {
-        await queryRunner.manager.update(Token, noToken.id, { price: noPrice });
-      }
+      await Promise.all([
+        ...marketUpdates.map((update) =>
+          queryRunner.manager.update(Market, update.id, {
+            outcomeYesPrice: update.outcomeYesPrice,
+            outcomeNoPrice: update.outcomeNoPrice,
+          }),
+        ),
+        ...tokenUpdates.map((update) =>
+          queryRunner.manager.update(Token, update.id, { price: update.price }),
+        ),
+      ]);
 
       await queryRunner.commitTransaction();
-      this.logger.debug(`Updated prices for market ${marketId}: YES=${yesPrice}, NO=${noPrice}`);
+      this.logger.debug(`Batch updated prices for ${updates.size} markets`);
     } catch (error) {
       await queryRunner.rollbackTransaction();
-      this.logger.error(`Failed to update market prices: ${(error as Error).message}`);
+      this.logger.error(`Failed to batch update market prices: ${(error as Error).message}`);
     } finally {
       await queryRunner.release();
     }

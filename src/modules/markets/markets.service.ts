@@ -36,7 +36,11 @@ export class MarketsService {
   }
 
   async getMarkets(query: QueryMarketsDto): Promise<MarketListResponseDto> {
-    this.logger.log('Fetching markets list');
+    this.logger.log('Fetching markets list', {
+      active: query.active,
+      closed: query.closed,
+      closedType: typeof query.closed,
+    });
 
     const qb = this.marketRepository.createQueryBuilder('market');
 
@@ -49,6 +53,7 @@ export class MarketsService {
     }
 
     if (query.closed !== undefined) {
+      this.logger.debug(`Applying closed filter: ${query.closed} (type: ${typeof query.closed})`);
       qb.andWhere('market.closed = :closed', { closed: query.closed });
     }
 
@@ -112,12 +117,17 @@ export class MarketsService {
 
       try {
         const providerMarkets = await this.marketProvider.getAllMarkets({
-          limit: 100,
+          limit: 200,
+          active: query.active,
         });
 
-        const matchingMarkets = providerMarkets.filter((market) =>
+        let matchingMarkets = providerMarkets.filter((market) =>
           market.question.toLowerCase().includes(query.search!.toLowerCase()),
         );
+
+        if (query.closed !== undefined) {
+          matchingMarkets = matchingMarkets.filter((market) => market.closed === query.closed);
+        }
 
         if (matchingMarkets.length > 0) {
           this.logger.log(`Found ${matchingMarkets.length} matching markets from API, syncing...`);

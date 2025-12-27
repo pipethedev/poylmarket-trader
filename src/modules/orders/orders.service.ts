@@ -51,12 +51,11 @@ export class OrdersService {
 
     const queryRunner = this.dataSource.createQueryRunner();
     await queryRunner.connect();
-    await queryRunner.startTransaction('SERIALIZABLE');
+    await queryRunner.startTransaction('READ COMMITTED');
 
     try {
       const market = await queryRunner.manager.findOne(Market, {
         where: { id: dto.marketId },
-        lock: { mode: 'pessimistic_read' },
       });
 
       if (!market) {
@@ -238,12 +237,11 @@ export class OrdersService {
 
     const queryRunner = this.dataSource.createQueryRunner();
     await queryRunner.connect();
-    await queryRunner.startTransaction();
+    await queryRunner.startTransaction('READ COMMITTED');
 
     try {
       const order = await queryRunner.manager.findOne(Order, {
         where: { id },
-        lock: { mode: 'pessimistic_write' },
       });
 
       if (!order) {

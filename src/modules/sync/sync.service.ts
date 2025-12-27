@@ -1,6 +1,5 @@
 import { Injectable, Inject, Optional } from '@nestjs/common';
 import { DataSource } from 'typeorm';
-import { ConfigService } from '@nestjs/config';
 import { MarketRepository, EventRepository } from '@database/repositories/index';
 import { Event } from '@database/entities/event.entity';
 import { Market } from '@database/entities/market.entity';
@@ -23,7 +22,6 @@ export class SyncService {
     private readonly marketRepository: MarketRepository,
     private readonly eventRepository: EventRepository,
     private readonly dataSource: DataSource,
-    private readonly configService: ConfigService,
     @Optional()
     private readonly wsService?: PolymarketWebSocketService,
     logger?: AppLogger,
@@ -33,7 +31,7 @@ export class SyncService {
       .setContext(SyncService.name);
   }
 
-  async syncEvents(limit = 100): Promise<SyncResult> {
+  async syncEvents(limit = 50): Promise<SyncResult> {
     const result: SyncResult = {
       eventsCreated: 0,
       eventsUpdated: 0,
@@ -47,23 +45,13 @@ export class SyncService {
     try {
       this.logger.log(`Starting event sync (limit: ${limit})`);
 
-      const syncDaysBack = this.configService.get<number>('scheduler.syncDaysBack') ?? 60;
-
-      const dateThreshold = new Date();
-
-      dateThreshold.setDate(dateThreshold.getDate() - syncDaysBack);
-
-      const startDateMin = dateThreshold.toISOString();
-
-      this.logger.log(`Filtering events from past ${syncDaysBack} days (since ${startDateMin})`);
-
       const providerEvents = await this.marketProvider.getEvents({
         limit,
+        order: 'volume',
+        ascending: false,
         featured: true,
-        startDateMin,
+        archived: false,
       });
-
-      this.logger.log(`Fetched ${providerEvents.length} events from provider (past month)`);
 
       for (const providerEvent of providerEvents) {
         try {
@@ -113,7 +101,7 @@ export class SyncService {
 
     const queryRunner = this.dataSource.createQueryRunner();
     await queryRunner.connect();
-    await queryRunner.startTransaction();
+    await queryRunner.startTransaction('READ COMMITTED');
 
     try {
       let event: Event | null = await queryRunner.manager.findOne(Event, {
@@ -161,9 +149,14 @@ export class SyncService {
 
     try {
       const providerMarkets = await this.marketProvider.getMarkets(providerEventId);
-      eventLogger.log(`Syncing ${providerMarkets.length} markets`);
 
-      for (const providerMarket of providerMarkets) {
+      const activeMarkets = providerMarkets.filter((market) => market.active && !market.closed);
+
+      eventLogger.log(
+        `Syncing ${activeMarkets.length} active markets (filtered from ${providerMarkets.length} total)`,
+      );
+
+      for (const providerMarket of activeMarkets) {
         try {
           const marketResult = await this.syncMarket(providerMarket, localEventId);
           if (marketResult.created) {
@@ -200,7 +193,8 @@ export class SyncService {
     const providerName = this.marketProvider.getName();
     const queryRunner = this.dataSource.createQueryRunner();
     await queryRunner.connect();
-    await queryRunner.startTransaction();
+
+    await queryRunner.startTransaction('READ COMMITTED');
 
     try {
       let market: Market | null = await queryRunner.manager.findOne(Market, {
@@ -242,6 +236,7 @@ export class SyncService {
       }
 
       await queryRunner.commitTransaction();
+      await queryRunner.release();
 
       if (created && tokenIds.length > 0 && this.wsService && market.active && !market.closed) {
         try {
@@ -259,9 +254,8 @@ export class SyncService {
       return { market, created, tokensCreated, tokensUpdated };
     } catch (error) {
       await queryRunner.rollbackTransaction();
-      throw error;
-    } finally {
       await queryRunner.release();
+      throw error;
     }
   }
 
@@ -274,32 +268,30 @@ export class SyncService {
       const activeMarkets = await this.marketRepository.findActiveMarketsWithPriceInfo();
 
       for (const market of activeMarkets) {
+        const marketId = market.conditionId || market.externalId;
+        const price = await this.marketProvider.getMarketPrice(marketId);
+
+        if (!price) {
+          continue;
+        }
+
         const queryRunner = this.dataSource.createQueryRunner();
         await queryRunner.connect();
-        await queryRunner.startTransaction();
+        await queryRunner.startTransaction('READ COMMITTED');
 
         try {
-          const lockedMarket = await queryRunner.manager.findOne(Market, {
+          const existingMarket = await queryRunner.manager.findOne(Market, {
             where: { id: market.id },
-            lock: { mode: 'pessimistic_write' },
           });
 
-          if (!lockedMarket) {
+          if (!existingMarket) {
             await queryRunner.rollbackTransaction();
-            continue;
-          }
-
-          const marketId = market.conditionId || market.externalId;
-          const price = await this.marketProvider.getMarketPrice(marketId);
-
-          if (!price) {
-            await queryRunner.rollbackTransaction();
+            await queryRunner.release();
             continue;
           }
 
           const tokens = await queryRunner.manager.find(Token, {
             where: { marketId: market.id },
-            lock: { mode: 'pessimistic_write' },
           });
 
           await queryRunner.manager.update(Market, market.id, {
@@ -379,31 +371,49 @@ export class SyncService {
     try {
       this.logger.log('Updating event statuses based on market statuses');
 
-      const allEvents = await this.eventRepository.findMany({});
-      let updatedCount = 0;
+      const eventsWithMarkets = await this.eventRepository
+        .createQueryBuilder('event')
+        .leftJoin('event.markets', 'market')
+        .select('event.id', 'id')
+        .addSelect('event.active', 'active')
+        .addSelect(
+          'COUNT(market.id) FILTER (WHERE market.active = true AND market.closed = false)',
+          'activeMarketCount',
+        )
+        .groupBy('event.id')
+        .getRawMany();
 
-      for (const event of allEvents) {
-        const markets = await this.marketRepository.findByEventId(event.id);
+      const updates: Array<{ id: number; active: boolean }> = [];
 
-        if (markets.length === 0) {
-          continue;
-        }
+      for (const row of eventsWithMarkets) {
+        const eventId = row.id;
+        const currentActive = row.active;
+        const hasActiveMarkets = parseInt(row.activeMarketCount || '0', 10) > 0;
 
-        const hasActiveMarkets = markets.some((market) => market.active && !market.closed);
-
-        if (hasActiveMarkets && !event.active) {
-          await this.eventRepository.update(event.id, { active: true });
-          updatedCount++;
-          this.logger.debug(`Marked event ${event.id} as active (has active markets)`);
-        } else if (!hasActiveMarkets && event.active) {
-          await this.eventRepository.update(event.id, { active: false });
-          updatedCount++;
-          this.logger.debug(`Marked event ${event.id} as inactive (no active markets)`);
+        if (hasActiveMarkets && !currentActive) {
+          updates.push({ id: eventId, active: true });
+        } else if (!hasActiveMarkets && currentActive) {
+          updates.push({ id: eventId, active: false });
         }
       }
 
-      if (updatedCount > 0) {
-        this.logger.log(`Updated status for ${updatedCount} events`);
+      if (updates.length > 0) {
+        const queryRunner = this.dataSource.createQueryRunner();
+        await queryRunner.connect();
+        await queryRunner.startTransaction('READ COMMITTED');
+
+        try {
+          for (const update of updates) {
+            await queryRunner.manager.update(Event, update.id, { active: update.active });
+          }
+          await queryRunner.commitTransaction();
+          this.logger.log(`Updated status for ${updates.length} events`);
+        } catch (error) {
+          await queryRunner.rollbackTransaction();
+          throw error;
+        } finally {
+          await queryRunner.release();
+        }
       }
     } catch (error) {
       this.logger.warn(`Failed to update all event statuses: ${(error as Error).message}`);

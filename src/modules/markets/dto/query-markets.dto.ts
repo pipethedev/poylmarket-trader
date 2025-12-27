@@ -10,6 +10,12 @@ import {
 } from 'class-validator';
 import { Type, Transform } from 'class-transformer';
 
+function normalizeBoolean(value: unknown): boolean | undefined {
+  if (value === 'true' || value === true || value === 1 || value === '1') return true;
+  if (value === 'false' || value === false || value === 0 || value === '0') return false;
+  return undefined;
+}
+
 export class QueryMarketsDto {
   @ApiPropertyOptional({
     description: 'Filter by event ID',
@@ -26,7 +32,7 @@ export class QueryMarketsDto {
     example: true,
   })
   @IsOptional()
-  @Transform(({ value }) => value === 'true' || value === true)
+  @Transform(({ value }) => normalizeBoolean(value))
   @IsBoolean()
   active?: boolean;
 
@@ -35,7 +41,7 @@ export class QueryMarketsDto {
     example: false,
   })
   @IsOptional()
-  @Transform(({ value }) => value === 'true' || value === true)
+  @Transform(({ value }) => normalizeBoolean(value))
   @IsBoolean()
   closed?: boolean;
 

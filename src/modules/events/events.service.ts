@@ -71,7 +71,6 @@ export class EventsService {
 
     this.logger.log(`Found ${result.meta.total} events in database`);
 
-    // If no results found and there's a search query, try fetching from API
     if (result.meta.total === 0 && query.search && this.marketProvider && this.syncService) {
       this.logger.log(
         `No events found in database for search "${query.search}", attempting API fallback`,
@@ -79,18 +78,24 @@ export class EventsService {
 
       try {
         const providerEvents = await this.marketProvider.getEvents({
-          limit: 50, // Reasonable limit for search
+          limit: 100,
+          active: query.active,
         });
 
-        // Filter by search term (case-insensitive)
-        const matchingEvents = providerEvents.filter((event) =>
+        let matchingEvents = providerEvents.filter((event) =>
           event.title.toLowerCase().includes(query.search!.toLowerCase()),
         );
+
+        if (query.featured !== undefined) {
+          matchingEvents = matchingEvents.filter((event) => {
+            const isFeatured = (event.metadata as any)?.featured === true;
+            return query.featured ? isFeatured : !isFeatured;
+          });
+        }
 
         if (matchingEvents.length > 0) {
           this.logger.log(`Found ${matchingEvents.length} matching events from API, syncing...`);
 
-          // Sync each matching event
           for (const providerEvent of matchingEvents) {
             try {
               const eventResult = await this.syncService.syncEvent(providerEvent);
@@ -102,7 +107,6 @@ export class EventsService {
             }
           }
 
-          // Re-query the database after syncing
           const retryResult = await this.eventRepository.paginate(qb, {
             page: query.page ?? 1,
             size: query.limit ?? query.pageSize ?? 20,
@@ -124,7 +128,6 @@ export class EventsService {
         }
       } catch (error) {
         this.logger.warn(`API fallback failed: ${(error as Error).message}`);
-        // Continue to return empty results if API call fails
       }
     }
 

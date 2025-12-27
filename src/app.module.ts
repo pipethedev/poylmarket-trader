@@ -38,16 +38,17 @@ import { OrdersModule } from '@modules/orders/orders.module';
           migrations: [__dirname + '/database/migrations/*{.ts,.js}'],
           synchronize: false,
           logging: process.env.NODE_ENV === 'development',
+          extra: {
+            max: 50,
+            min: 5,
+            idleTimeoutMillis: 30000,
+            connectionTimeoutMillis: 2000,
+            ...(sslMode && { sslmode: sslMode }),
+            ...(channelBinding && { channel_binding: channelBinding }),
+          },
           ...(ssl && {
             ssl: {
               rejectUnauthorized: sslMode === 'require',
-            },
-          }),
-          ...(sslMode && { extra: { sslmode: sslMode } }),
-          ...(channelBinding && {
-            extra: {
-              ...(sslMode && { sslmode: sslMode }),
-              channel_binding: channelBinding,
             },
           }),
         };
