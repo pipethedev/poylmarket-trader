@@ -32,7 +32,7 @@ Polymarket Trading Service - A NestJS-based application for integrating with Pol
 - Event and Market synchronization with Polymarket
 - Queue-based order processing with BullMQ
 - Idempotent order creation and cancellation
-- Transactional safety and optimistic locking
+- Transactional safety and locking
 - Comprehensive test coverage (unit and e2e)
 - Real-time WebSocket integration for live market updates
 
