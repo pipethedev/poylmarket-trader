@@ -1,5 +1,7 @@
 import { Event } from '@database/entities/event.entity';
+import { Market } from '@database/entities/market.entity';
 import type { ProviderEvent } from '@app-types/index';
+import { EventResponseDto, MarketSummaryDto } from '@modules/events/dto/event-response.dto';
 
 export class EventFactory {
   static create(data: ProviderEvent, providerName: string): Partial<Event> {
@@ -53,5 +55,32 @@ export class EventFactory {
     entity.featured = featured;
     entity.metadata = data.metadata ?? null;
     return entity;
+  }
+
+  static toResponse(event: Event): EventResponseDto {
+    return {
+      id: event.id,
+      externalId: event.externalId,
+      title: event.title,
+      description: event.description,
+      slug: event.slug,
+      image: event.image,
+      startDate: event.startDate,
+      endDate: event.endDate,
+      active: event.active,
+      featured: event.featured,
+      createdAt: event.createdAt,
+      updatedAt: event.updatedAt,
+    };
+  }
+
+  static mapMarketToSummary(market: Market): MarketSummaryDto {
+    return {
+      id: market.id,
+      question: market.question,
+      outcomeYesPrice: market.outcomeYesPrice,
+      outcomeNoPrice: market.outcomeNoPrice,
+      active: market.active,
+    };
   }
 }

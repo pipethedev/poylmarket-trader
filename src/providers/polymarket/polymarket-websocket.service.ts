@@ -3,21 +3,9 @@ import { ConfigService } from '@nestjs/config';
 import WebSocket from 'ws';
 import { MarketRepository } from '@database/repositories/index';
 import { AppLogger, LogPrefix } from '@common/logger/index';
+import { WebSocketMessage, SubscriptionMessage } from './polymarket.types';
 
 type ConnectionState = 'disconnected' | 'connecting' | 'connected' | 'error';
-
-interface SubscriptionMessage {
-  type?: 'MARKET' | 'USER';
-  operation?: 'subscribe' | 'unsubscribe';
-  assets_ids?: string[];
-  markets?: string[];
-  custom_feature_enabled?: boolean;
-}
-
-interface WebSocketMessage {
-  event_type: string;
-  [key: string]: unknown;
-}
 
 @Injectable()
 export class PolymarketWebSocketService implements OnModuleInit, OnModuleDestroy {

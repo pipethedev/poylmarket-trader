@@ -2,14 +2,14 @@ import { Injectable } from '@nestjs/common';
 import { DataSource } from 'typeorm';
 import { RedisService } from '@common/redis/redis.service';
 
-export interface SystemStatus {
+export type SystemStatus = {
   status: string;
   name: string;
   version: string;
   timestamp: string;
-}
+};
 
-export interface HealthCheck {
+export type HealthCheck = {
   status: 'healthy' | 'unhealthy';
   timestamp: string;
   services: {
@@ -17,13 +17,13 @@ export interface HealthCheck {
     database: ServiceHealth;
     redis: ServiceHealth;
   };
-}
+};
 
-export interface ServiceHealth {
+export type ServiceHealth = {
   status: 'up' | 'down';
   latency?: number;
   error?: string;
-}
+};
 
 @Injectable()
 export class AppService {

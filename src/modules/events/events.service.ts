@@ -2,17 +2,16 @@ import { Injectable, Inject, Optional } from '@nestjs/common';
 import { InjectQueue } from '@nestjs/bullmq';
 import { Queue } from 'bullmq';
 import { EventRepository, MarketRepository, TokenRepository } from '@database/repositories/index';
-import { Event } from '@database/entities/event.entity';
-import { Market } from '@database/entities/market.entity';
 import { Token } from '@database/entities/token.entity';
 import { AppLogger, LogPrefix } from '@common/logger/index';
 import { EventNotFoundException } from '@common/exceptions/index';
 import { QueryEventsDto } from './dto/query-events.dto';
-import { EventResponseDto, EventListResponseDto, EventDetailResponseDto, MarketSummaryDto } from './dto/event-response.dto';
+import { EventListResponseDto, EventDetailResponseDto, MarketSummaryDto } from './dto/event-response.dto';
 import type { SyncJobData } from '@modules/sync/sync.processor';
 import { MARKET_PROVIDER } from '@providers/market-provider.interface';
 import type { MarketProvider } from '@app-types/index';
 import { SyncService } from '@modules/sync/sync.service';
+import { EventFactory } from '@common/factories/event.factory';
 
 @Injectable()
 export class EventsService {
@@ -106,7 +105,7 @@ export class EventsService {
 
           return {
             data: retryResult.data.map((event) => ({
-              ...this.mapToResponse(event),
+              ...EventFactory.toResponse(event),
               marketCount: retryMarketCounts[event.id] || 0,
             })),
             meta: retryResult.meta,
@@ -119,7 +118,7 @@ export class EventsService {
 
     return {
       data: result.data.map((event) => ({
-        ...this.mapToResponse(event),
+        ...EventFactory.toResponse(event),
         marketCount: marketCounts[event.id] || 0,
       })),
       meta: result.meta,
@@ -153,9 +152,9 @@ export class EventsService {
     this.logger.log(`Event found with ${markets.length} markets`);
 
     return {
-      ...this.mapToResponse(event),
+      ...EventFactory.toResponse(event),
       markets: markets.map((market) => {
-        const summary = this.mapMarketToSummary(market);
+        const summary = EventFactory.mapMarketToSummary(market);
         summary.tokens = (tokensMap.get(market.id) || []).map((token) => ({
           id: token.id,
           tokenId: token.tokenId,
@@ -184,7 +183,7 @@ export class EventsService {
 
     this.logger.log(`Found ${markets.length} markets for event`);
 
-    return markets.map((market) => this.mapMarketToSummary(market));
+    return markets.map((market) => EventFactory.mapMarketToSummary(market));
   }
 
   async syncEvents(limit = 100): Promise<{ message: string }> {
@@ -211,33 +210,6 @@ export class EventsService {
 
     return {
       message: 'Sync job has been queued and will be processed in the background',
-    };
-  }
-
-  private mapToResponse(event: Event): EventResponseDto {
-    return {
-      id: event.id,
-      externalId: event.externalId,
-      title: event.title,
-      description: event.description,
-      slug: event.slug,
-      image: event.image,
-      startDate: event.startDate,
-      endDate: event.endDate,
-      active: event.active,
-      featured: event.featured,
-      createdAt: event.createdAt,
-      updatedAt: event.updatedAt,
-    };
-  }
-
-  private mapMarketToSummary(market: Market): MarketSummaryDto {
-    return {
-      id: market.id,
-      question: market.question,
-      outcomeYesPrice: market.outcomeYesPrice,
-      outcomeNoPrice: market.outcomeNoPrice,
-      active: market.active,
     };
   }
 }

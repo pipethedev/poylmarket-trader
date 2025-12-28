@@ -19,7 +19,7 @@ import {
 } from '@common/exceptions/index';
 import { CreateOrderDto } from './dto/create-order.dto';
 import { QueryOrdersDto } from './dto/query-orders.dto';
-import { OrderResponseDto, OrderListResponseDto } from './dto/order-response.dto';
+import { OrderResponseDto, OrderListResponseDto, OrderStatsDto } from './dto/order-response.dto';
 import type { OrderJobData, MarketProvider, WalletContext, CancelResult } from '@app-types/index';
 import { MARKET_PROVIDER } from '@providers/market-provider.interface';
 import { PolymarketClobService } from '@providers/polymarket/polymarket-clob.service';
@@ -156,7 +156,8 @@ export class OrdersService {
 
     this.logger.log(`Found ${result.meta.total} orders`);
 
-    let stats;
+    let stats!: OrderStatsDto;
+
     if (this.clobService?.isRealTradingEnabled() && this.clobService?.isServerWalletConfigured()) {
       try {
         const [openOrders, trades] = await Promise.all([this.clobService.getOpenOrders(), this.clobService.getTrades()]);
@@ -202,7 +203,6 @@ export class OrdersService {
 
       if (order.status === OrderStatus.PROCESSING) {
         if (!hasExternalOrderId) {
-          this.logger.warn(`Order is PROCESSING without externalOrderId, cannot cancel until placement completes`);
           throw new OrderNotCancellableException(String(id), order.status);
         }
       } else if (!cancellableStatuses.includes(order.status)) {

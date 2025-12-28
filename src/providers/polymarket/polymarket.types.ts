@@ -108,3 +108,85 @@ export type OrderResponse = {
   status?: string;
   error?: string;
 };
+
+export type WebSocketMessage = {
+  event_type: string;
+  [key: string]: unknown;
+};
+
+export type PriceChange = {
+  asset_id: string;
+  price: string;
+  size: string;
+  side: 'BUY' | 'SELL';
+  hash: string;
+  best_bid: string;
+  best_ask: string;
+};
+
+export type BookMessage = {
+  event_type: string;
+  asset_id: string;
+  market: string;
+  timestamp: string;
+  hash: string;
+  bids: Array<{ price: string; size: string }>;
+  asks: Array<{ price: string; size: string }>;
+};
+
+export type PriceChangeMessage = {
+  event_type: string;
+  market: string;
+  price_changes: PriceChange[];
+  timestamp: string;
+};
+
+export type LastTradePriceMessage = {
+  event_type: string;
+  asset_id: string;
+  market: string;
+  price: string;
+  side: 'BUY' | 'SELL';
+  size: string;
+  timestamp: string;
+};
+
+export type BestBidAskMessage = {
+  event_type: string;
+  market: string;
+  asset_id: string;
+  best_bid: string;
+  best_ask: string;
+  spread: string;
+  timestamp: string;
+};
+
+export type NewMarketMessage = {
+  event_type: string;
+  id: string;
+  question: string;
+  market: string;
+  slug: string;
+  description: string;
+  assets_ids: string[];
+  outcomes: string[];
+  timestamp: string;
+};
+
+export type MarketResolvedMessage = {
+  event_type: string;
+  id: string;
+  question: string;
+  market: string;
+  winning_asset_id: string;
+  winning_outcome: string;
+  timestamp: string;
+};
+
+export type SubscriptionMessage = {
+  type?: 'MARKET' | 'USER';
+  operation?: 'subscribe' | 'unsubscribe';
+  assets_ids?: string[];
+  markets?: string[];
+  custom_feature_enabled?: boolean;
+};

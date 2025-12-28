@@ -54,19 +54,9 @@ export class SchedulerService implements OnModuleInit {
 
   async handleEventSync(): Promise<void> {
     this.logger.log('Starting scheduled event sync');
-    const startTime = Date.now();
 
     try {
       const result = await this.syncService.syncEvents(100);
-
-      const duration = Date.now() - startTime;
-      this.logger.log(
-        `Scheduled sync completed in ${duration}ms - ` +
-          `Events: ${result.eventsCreated} created, ${result.eventsUpdated} updated | ` +
-          `Markets: ${result.marketsCreated} created, ${result.marketsUpdated} updated | ` +
-          `Tokens: ${result.tokensCreated} created, ${result.tokensUpdated} updated | ` +
-          `Errors: ${result.errors.length}`,
-      );
 
       if (result.errors.length > 0) {
         this.logger.warn(`Sync completed with ${result.errors.length} errors`);
@@ -79,16 +69,12 @@ export class SchedulerService implements OnModuleInit {
 
   async handlePriceUpdate(): Promise<void> {
     this.logger.log('Starting scheduled price update (polling fallback)');
-    const startTime = Date.now();
 
     try {
       const result = await this.syncService.updateMarketPrices();
 
-      const duration = Date.now() - startTime;
-      this.logger.log(`Price update completed in ${duration}ms (polling) - ` + `Updated: ${result.updated} | Errors: ${result.errors.length}`);
-
       if (result.errors.length > 0) {
-        this.logger.warn(`Price update completed with ${result.errors.length} errors`);
+        this.logger.warn(`Price update failed with ${result.errors.length} errors`);
       }
     } catch (error) {
       this.logger.error(`Scheduled price update failed: ${(error as Error).message}`, (error as Error).stack);
