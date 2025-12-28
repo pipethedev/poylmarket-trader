@@ -40,14 +40,21 @@ export default (): AppConfig => ({
     priceUpdateCron: process.env.PRICE_UPDATE_CRON_EXPRESSION ?? '*/5 * * * *',
   },
   cors: {
-    origins: [
-      'http://localhost:3000',
-      'http://localhost:3001',
-      'http://127.0.0.1:3000',
-      'http://127.0.0.1:3001',
-      'https://polymart-trader-client.brimble.app',
-      'https://polymart-trade.xyz',
-    ],
+    origins: (() => {
+      const defaultOrigins = [
+        'http://localhost:3000',
+        'http://localhost:3001',
+        'http://127.0.0.1:3000',
+        'http://127.0.0.1:3001',
+        'https://polymart-trader-client.brimble.app',
+        'https://polymart-trade.xyz',
+      ];
+      if (process.env.CORS_ORIGINS) {
+        const envOrigins = process.env.CORS_ORIGINS.split(',').map((origin) => origin.trim());
+        return [...new Set([...defaultOrigins, ...envOrigins])];
+      }
+      return defaultOrigins;
+    })(),
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization', 'x-idempotency-key'],
     credentials: true,

@@ -131,9 +131,13 @@ export class InsufficientUsdcBalanceException extends AppException {
 
 export class InsufficientUsdcAllowanceException extends AppException {
   constructor(required: string, approved: string) {
+    const requiredNum = parseFloat(required);
+    const approvedNum = parseFloat(approved);
+    const needsApproval = requiredNum - approvedNum;
     super(
       'INSUFFICIENT_USDC_ALLOWANCE',
-      `Insufficient USDC allowance. Required: ${required}, Approved: ${approved}. Please approve USDC spending first.`,
+      `Insufficient USDC spending approval. You have approved ${approved} USDC, but this order requires ${required} USDC. ` +
+        `Please approve at least ${needsApproval.toFixed(2)} more USDC. Note: Having USDC balance is different from approving spending - you need to approve the server wallet to spend your USDC.`,
       HttpStatus.BAD_REQUEST,
       { required, approved },
     );
