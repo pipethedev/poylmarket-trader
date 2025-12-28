@@ -211,10 +211,7 @@ describe('Markets API (e2e)', () => {
         active: true,
       });
 
-      const response = await request(app.getHttpServer())
-        .get('/markets')
-        .query({ active: true, eventId: event1.id })
-        .expect(200);
+      const response = await request(app.getHttpServer()).get('/markets').query({ active: true, eventId: event1.id }).expect(200);
 
       expect(response.body.data).toHaveLength(1);
       expect(response.body.data[0].question).toBe('Active Market in Event 1');

@@ -19,12 +19,7 @@ describe('Orders API (e2e)', () => {
   let ordersQueue: Queue;
   let orderRepository: OrderRepository;
 
-  async function waitForOrderStatus(
-    orderId: number,
-    expectedStatus: OrderStatus,
-    timeout = 10000,
-    interval = 200,
-  ): Promise<Order> {
+  async function waitForOrderStatus(orderId: number, expectedStatus: OrderStatus, timeout = 10000, interval = 200): Promise<Order> {
     const startTime = Date.now();
     while (Date.now() - startTime < timeout) {
       const order = await orderRepository.findById(orderId);
@@ -34,29 +29,19 @@ describe('Orders API (e2e)', () => {
       await new Promise((resolve) => setTimeout(resolve, interval));
     }
     const order = await orderRepository.findById(orderId);
-    throw new Error(
-      `Order ${orderId} did not reach status ${expectedStatus} within ${timeout}ms. Current status: ${order?.status}`,
-    );
+    throw new Error(`Order ${orderId} did not reach status ${expectedStatus} within ${timeout}ms. Current status: ${order?.status}`);
   }
 
   async function waitForQueueEmpty(timeout = 10000, interval = 200): Promise<void> {
     const startTime = Date.now();
     while (Date.now() - startTime < timeout) {
-      const [waiting, active, delayed] = await Promise.all([
-        ordersQueue.getWaitingCount(),
-        ordersQueue.getActiveCount(),
-        ordersQueue.getDelayedCount(),
-      ]);
+      const [waiting, active, delayed] = await Promise.all([ordersQueue.getWaitingCount(), ordersQueue.getActiveCount(), ordersQueue.getDelayedCount()]);
       if (waiting === 0 && active === 0 && delayed === 0) {
         return;
       }
       await new Promise((resolve) => setTimeout(resolve, interval));
     }
-    const [waiting, active, delayed] = await Promise.all([
-      ordersQueue.getWaitingCount(),
-      ordersQueue.getActiveCount(),
-      ordersQueue.getDelayedCount(),
-    ]);
+    const [waiting, active, delayed] = await Promise.all([ordersQueue.getWaitingCount(), ordersQueue.getActiveCount(), ordersQueue.getDelayedCount()]);
     throw new Error(`Queue not empty within ${timeout}ms. Waiting: ${waiting}, Active: ${active}, Delayed: ${delayed}`);
   }
 
@@ -166,17 +151,9 @@ describe('Orders API (e2e)', () => {
         quantity: '10',
       };
 
-      const response1 = await request(app.getHttpServer())
-        .post('/orders')
-        .set('x-idempotency-key', idempotencyKey)
-        .send(orderData)
-        .expect(201);
+      const response1 = await request(app.getHttpServer()).post('/orders').set('x-idempotency-key', idempotencyKey).send(orderData).expect(201);
 
-      const response2 = await request(app.getHttpServer())
-        .post('/orders')
-        .set('x-idempotency-key', idempotencyKey)
-        .send(orderData)
-        .expect(201);
+      const response2 = await request(app.getHttpServer()).post('/orders').set('x-idempotency-key', idempotencyKey).send(orderData).expect(201);
 
       expect(response1.body.id).toBe(response2.body.id);
     });
@@ -305,10 +282,7 @@ describe('Orders API (e2e)', () => {
         status: OrderStatus.FILLED,
       });
 
-      const response = await request(app.getHttpServer())
-        .get('/orders')
-        .query({ status: OrderStatus.PENDING })
-        .expect(200);
+      const response = await request(app.getHttpServer()).get('/orders').query({ status: OrderStatus.PENDING }).expect(200);
 
       expect(response.body.data).toHaveLength(1);
       expect(response.body.data[0].status).toBe(OrderStatus.PENDING);

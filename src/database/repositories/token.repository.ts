@@ -37,9 +37,7 @@ export class TokenRepository extends BaseRepository<Token> {
   async findTokenIdsByMarketIds(marketIds: number[]): Promise<Map<number, string[]>> {
     if (marketIds.length === 0) return new Map();
 
-    const tokens = await this.createQueryBuilder('token')
-      .where('token.market_id IN (:...marketIds)', { marketIds })
-      .getMany();
+    const tokens = await this.createQueryBuilder('token').where('token.market_id IN (:...marketIds)', { marketIds }).getMany();
 
     const tokenMap = new Map<number, string[]>();
     for (const token of tokens) {

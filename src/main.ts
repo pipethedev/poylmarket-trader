@@ -37,9 +37,7 @@ async function bootstrap() {
 
   const config = new DocumentBuilder()
     .setTitle('Polymart Trader Task')
-    .setDescription(
-      'A trading system that syncs Polymarket events/markets data, accepts order requests, queues orders for execution, and handles order lifecycle.',
-    )
+    .setDescription('A trading system that syncs Polymarket events/markets data, accepts order requests, queues orders for execution, and handles order lifecycle.')
     .setVersion('1.0')
     .addTag('events', 'Event management and synchronization')
     .addTag('markets', 'Market data and pricing')

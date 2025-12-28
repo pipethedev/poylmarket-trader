@@ -88,15 +88,9 @@ export class TestDataFactory {
       question: 'Market 2?',
     });
 
-    const tokensM1 = await Promise.all([
-      this.createToken(market1.id, TokenOutcome.YES),
-      this.createToken(market1.id, TokenOutcome.NO),
-    ]);
+    const tokensM1 = await Promise.all([this.createToken(market1.id, TokenOutcome.YES), this.createToken(market1.id, TokenOutcome.NO)]);
 
-    const tokensM2 = await Promise.all([
-      this.createToken(market2.id, TokenOutcome.YES),
-      this.createToken(market2.id, TokenOutcome.NO),
-    ]);
+    const tokensM2 = await Promise.all([this.createToken(market2.id, TokenOutcome.YES), this.createToken(market2.id, TokenOutcome.NO)]);
 
     return {
       event,

@@ -20,11 +20,7 @@ describe('AppController', () => {
   beforeEach(async () => {
     const app: TestingModule = await Test.createTestingModule({
       controllers: [AppController],
-      providers: [
-        AppService,
-        { provide: DataSource, useValue: mockDataSource },
-        { provide: RedisService, useValue: mockRedisService },
-      ],
+      providers: [AppService, { provide: DataSource, useValue: mockDataSource }, { provide: RedisService, useValue: mockRedisService }],
     }).compile();
 
     appController = app.get<AppController>(AppController);

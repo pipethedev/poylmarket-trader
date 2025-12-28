@@ -43,12 +43,7 @@ export class OrderRepository extends BaseRepository<Order> {
     });
   }
 
-  async markAsFilled(
-    id: number,
-    filledQuantity: string,
-    averageFillPrice: string,
-    externalOrderId?: string,
-  ): Promise<void> {
+  async markAsFilled(id: number, filledQuantity: string, averageFillPrice: string, externalOrderId?: string): Promise<void> {
     await this.updateBy({ id } as never, {
       status: OrderStatus.FILLED,
       filledQuantity,

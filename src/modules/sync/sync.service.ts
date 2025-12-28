@@ -75,9 +75,7 @@ export class SyncService {
 
       await this.updateAllEventStatuses();
 
-      this.logger.log(
-        `Sync completed - Events: ${result.eventsCreated} created, ${result.eventsUpdated} updated | Markets: ${result.marketsCreated} created, ${result.marketsUpdated} updated`,
-      );
+      this.logger.log(`Sync completed - Events: ${result.eventsCreated} created, ${result.eventsUpdated} updated | Markets: ${result.marketsCreated} created, ${result.marketsUpdated} updated`);
       return result;
     } catch (error) {
       this.logger.error(`Event sync failed: ${(error as Error).message}`);
@@ -125,10 +123,7 @@ export class SyncService {
     }
   }
 
-  async syncMarketsForEvent(
-    providerEventId: string,
-    localEventId: number,
-  ): Promise<Omit<SyncResult, 'eventsCreated' | 'eventsUpdated'>> {
+  async syncMarketsForEvent(providerEventId: string, localEventId: number): Promise<Omit<SyncResult, 'eventsCreated' | 'eventsUpdated'>> {
     const result = {
       marketsCreated: 0,
       marketsUpdated: 0,
@@ -261,21 +256,16 @@ export class SyncService {
           continue;
         }
 
+        const existingMarket = await this.marketRepository.findById(market.id);
+        if (!existingMarket) {
+          continue;
+        }
+
         const queryRunner = this.dataSource.createQueryRunner();
         await queryRunner.connect();
         await queryRunner.startTransaction('READ COMMITTED');
 
         try {
-          const existingMarket = await queryRunner.manager.findOne(Market, {
-            where: { id: market.id },
-          });
-
-          if (!existingMarket) {
-            await queryRunner.rollbackTransaction();
-            await queryRunner.release();
-            continue;
-          }
-
           const tokens = await queryRunner.manager.find(Token, {
             where: { marketId: market.id },
           });
@@ -328,9 +318,7 @@ export class SyncService {
         const event = await this.eventRepository.findOneBy({ id: eventId });
         if (event && !event.active) {
           await this.eventRepository.update(eventId, { active: true });
-          this.logger.log(
-            `Marked event ${eventId} as active (has ${markets.filter((m) => m.active && !m.closed).length} active markets)`,
-          );
+          this.logger.log(`Marked event ${eventId} as active (has ${markets.filter((m) => m.active && !m.closed).length} active markets)`);
         }
       } else if (allMarketsClosed) {
         await this.eventRepository.update(eventId, { active: false });
@@ -356,10 +344,7 @@ export class SyncService {
         .leftJoin('event.markets', 'market')
         .select('event.id', 'id')
         .addSelect('event.active', 'active')
-        .addSelect(
-          'COUNT(market.id) FILTER (WHERE market.active = true AND market.closed = false)',
-          'activeMarketCount',
-        )
+        .addSelect('COUNT(market.id) FILTER (WHERE market.active = true AND market.closed = false)', 'activeMarketCount')
         .groupBy('event.id')
         .getRawMany();
 

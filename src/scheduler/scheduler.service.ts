@@ -85,10 +85,7 @@ export class SchedulerService implements OnModuleInit {
       const result = await this.syncService.updateMarketPrices();
 
       const duration = Date.now() - startTime;
-      this.logger.log(
-        `Price update completed in ${duration}ms (polling) - ` +
-          `Updated: ${result.updated} | Errors: ${result.errors.length}`,
-      );
+      this.logger.log(`Price update completed in ${duration}ms (polling) - ` + `Updated: ${result.updated} | Errors: ${result.errors.length}`);
 
       if (result.errors.length > 0) {
         this.logger.warn(`Price update completed with ${result.errors.length} errors`);

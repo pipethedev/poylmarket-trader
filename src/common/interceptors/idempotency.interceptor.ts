@@ -41,11 +41,7 @@ export class IdempotencyInterceptor implements NestInterceptor {
 
     this.logger.setContextData({ idempotencyKey }).debug('Processing idempotent request');
 
-    const result = await this.idempotencyService.checkAndLock(
-      idempotencyKey,
-      request.body,
-      options.expiresInSeconds ?? 86400,
-    );
+    const result = await this.idempotencyService.checkAndLock(idempotencyKey, request.body, options.expiresInSeconds ?? 86400);
 
     if (!result.isNew && result.cachedResponse) {
       this.logger.debug('Returning cached response');
@@ -54,14 +50,8 @@ export class IdempotencyInterceptor implements NestInterceptor {
     }
 
     return next.handle().pipe(
-      switchMap((data) =>
-        from(
-          this.idempotencyService.storeResponse(idempotencyKey, response.statusCode, data as Record<string, unknown>),
-        ).pipe(switchMap(() => of(data))),
-      ),
-      catchError((error: Error) =>
-        from(this.idempotencyService.releaseLock(idempotencyKey)).pipe(switchMap(() => throwError(() => error))),
-      ),
+      switchMap((data) => from(this.idempotencyService.storeResponse(idempotencyKey, response.statusCode, data as Record<string, unknown>)).pipe(switchMap(() => of(data)))),
+      catchError((error: Error) => from(this.idempotencyService.releaseLock(idempotencyKey)).pipe(switchMap(() => throwError(() => error)))),
     );
   }
 }

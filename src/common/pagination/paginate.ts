@@ -1,10 +1,7 @@
 import { SelectQueryBuilder, ObjectLiteral } from 'typeorm';
 import type { PaginationOptions, PaginatedResult, PaginationMeta } from './interfaces';
 
-export async function paginate<T extends ObjectLiteral>(
-  queryBuilder: SelectQueryBuilder<T>,
-  options: PaginationOptions,
-): Promise<PaginatedResult<T>> {
+export async function paginate<T extends ObjectLiteral>(queryBuilder: SelectQueryBuilder<T>, options: PaginationOptions): Promise<PaginatedResult<T>> {
   const { page, size } = resolveOptions(options);
   const offset = (page - 1) * size;
 

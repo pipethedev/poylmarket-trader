@@ -40,8 +40,7 @@ export class UsdcTokenService {
       throw new Error('POLYMARKET_FUNDER_ADDRESS is required for USDC operations');
     }
 
-    this.usdcAddress =
-      this.configService.get<string>('polymarket.usdcAddress') || '0x3c499c542cEF5E3811e1192ce70d8cC03d5c3359';
+    this.usdcAddress = this.configService.get<string>('polymarket.usdcAddress') || '0x3c499c542cEF5E3811e1192ce70d8cC03d5c3359';
 
     this.rpcUrl = rpcUrl;
 
@@ -52,9 +51,7 @@ export class UsdcTokenService {
     this.serverWallet = new Wallet(privateKey, this.provider);
     this.usdcContract = new Contract(this.usdcAddress, ERC20_ABI, this.provider);
 
-    this.logger.log(
-      `USDC Token Service initialized. Funder address: ${this.funderAddress}, USDC address: ${this.usdcAddress}, RPC: ${rpcUrl}, Network: Polygon (137)`,
-    );
+    this.logger.log(`USDC Token Service initialized. Funder address: ${this.funderAddress}, USDC address: ${this.usdcAddress}, RPC: ${rpcUrl}, Network: Polygon (137)`);
   }
 
   async getBalance(address: string): Promise<string> {
@@ -107,11 +104,9 @@ export class UsdcTokenService {
     const networkPriorityFee = feeData.maxPriorityFeePerGas ? BigInt(feeData.maxPriorityFeePerGas.toString()) : null;
     const networkBaseFee = feeData.maxFeePerGas ? BigInt(feeData.maxFeePerGas.toString()) : null;
 
-    const maxPriorityFeePerGas =
-      networkPriorityFee && networkPriorityFee > minPriorityFee ? networkPriorityFee : minPriorityFee;
+    const maxPriorityFeePerGas = networkPriorityFee && networkPriorityFee > minPriorityFee ? networkPriorityFee : minPriorityFee;
 
-    const maxFeePerGas =
-      networkBaseFee && networkBaseFee > minBaseFee ? networkBaseFee : maxPriorityFeePerGas + minBaseFee;
+    const maxFeePerGas = networkBaseFee && networkBaseFee > minBaseFee ? networkBaseFee : maxPriorityFeePerGas + minBaseFee;
 
     return {
       maxFeePerGas,
@@ -126,9 +121,7 @@ export class UsdcTokenService {
       const minMaticRequired = 0.01;
 
       if (parseFloat(maticBalance) < minMaticRequired) {
-        throw new Error(
-          `Server wallet has insufficient MATIC for gas fees. Current balance: ${maticBalance} MATIC. Please fund the server wallet address: ${this.serverWallet.address}`,
-        );
+        throw new Error(`Server wallet has insufficient MATIC for gas fees. Current balance: ${maticBalance} MATIC. Please fund the server wallet address: ${this.serverWallet.address}`);
       }
 
       const decimals = await this.usdcContract.decimals();
@@ -136,9 +129,7 @@ export class UsdcTokenService {
 
       const allowance = await this.usdcContract.allowance(userAddress, this.serverWallet.address);
       if (allowance < amountWei) {
-        throw new Error(
-          `Insufficient allowance. User has approved ${allowance.toString()}, but need ${amountWei.toString()}`,
-        );
+        throw new Error(`Insufficient allowance. User has approved ${allowance.toString()}, but need ${amountWei.toString()}`);
       }
 
       const { maxFeePerGas, maxPriorityFeePerGas } = await this.getGasPrices();

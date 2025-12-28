@@ -1,14 +1,4 @@
-import {
-  Repository,
-  FindOptionsWhere,
-  FindManyOptions,
-  FindOneOptions,
-  DeepPartial,
-  ObjectLiteral,
-  SelectQueryBuilder,
-  EntityManager,
-  QueryRunner,
-} from 'typeorm';
+import { Repository, FindOptionsWhere, FindManyOptions, FindOneOptions, DeepPartial, ObjectLiteral, SelectQueryBuilder, EntityManager, QueryRunner } from 'typeorm';
 import { paginate, PaginatedResult, PaginationOptions } from '@common/pagination/index';
 
 export interface EntityWithId extends ObjectLiteral {

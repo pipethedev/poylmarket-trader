@@ -1,17 +1,4 @@
-import {
-  Controller,
-  Get,
-  Post,
-  Delete,
-  Body,
-  Param,
-  Query,
-  Headers,
-  UseInterceptors,
-  HttpCode,
-  HttpStatus,
-  ParseIntPipe,
-} from '@nestjs/common';
+import { Controller, Get, Post, Delete, Body, Param, Query, Headers, UseInterceptors, HttpCode, HttpStatus, ParseIntPipe } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiHeader, ApiParam, ApiSecurity } from '@nestjs/swagger';
 import { OrdersService } from './orders.service';
 import { CreateOrderDto } from './dto/create-order.dto';
@@ -62,10 +49,7 @@ export class OrdersController {
     status: 409,
     description: 'Idempotency key conflict - request is being processed or has different parameters',
   })
-  async createOrder(
-    @Body() dto: CreateOrderDto,
-    @Headers('x-idempotency-key') idempotencyKey: string,
-  ): Promise<OrderResponseDto> {
+  async createOrder(@Body() dto: CreateOrderDto, @Headers('x-idempotency-key') idempotencyKey: string): Promise<OrderResponseDto> {
     if (!idempotencyKey) {
       throw new IdempotencyKeyRequiredException();
     }
@@ -112,8 +96,7 @@ export class OrdersController {
   @Delete(':id')
   @ApiOperation({
     summary: 'Cancel an order',
-    description:
-      'Cancels a pending or queued order. Orders that are already processing or completed cannot be cancelled.',
+    description: 'Cancels a pending or queued order. Orders that are already processing or completed cannot be cancelled.',
   })
   @ApiParam({
     name: 'id',
@@ -141,8 +124,7 @@ export class OrdersController {
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
     summary: 'Cancel an order (alternative endpoint)',
-    description:
-      'Cancels a pending or queued order using POST method. Orders that are already processing or completed cannot be cancelled.',
+    description: 'Cancels a pending or queued order using POST method. Orders that are already processing or completed cannot be cancelled.',
   })
   @ApiParam({
     name: 'orderId',
@@ -214,9 +196,7 @@ export class OrdersController {
       },
     },
   })
-  async getUsdcAllowance(
-    @Param('address') address: string,
-  ): Promise<{ allowance: string; address: string; serverWallet: string }> {
+  async getUsdcAllowance(@Param('address') address: string): Promise<{ allowance: string; address: string; serverWallet: string }> {
     const allowance = await this.usdcTokenService.getAllowance(address);
     const serverWallet = this.usdcTokenService.getServerWalletAddress();
     return { allowance, address, serverWallet };

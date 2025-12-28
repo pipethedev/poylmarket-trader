@@ -19,12 +19,10 @@ export class DuplicateOrderException extends AppException {
 
 export class OrderNotCancellableException extends AppException {
   constructor(orderId: string, currentStatus: string) {
-    super(
-      'ORDER_NOT_CANCELLABLE',
-      `Order ${orderId} cannot be cancelled in status ${currentStatus}`,
-      HttpStatus.BAD_REQUEST,
-      { orderId, currentStatus },
-    );
+    super('ORDER_NOT_CANCELLABLE', `Order ${orderId} cannot be cancelled in status ${currentStatus}`, HttpStatus.BAD_REQUEST, {
+      orderId,
+      currentStatus,
+    });
   }
 }
 
@@ -78,22 +76,13 @@ export class ProviderUnavailableException extends AppException {
 
 export class IdempotencyKeyRequiredException extends AppException {
   constructor() {
-    super(
-      'IDEMPOTENCY_KEY_REQUIRED',
-      'x-idempotency-key header is required for this operation',
-      HttpStatus.BAD_REQUEST,
-    );
+    super('IDEMPOTENCY_KEY_REQUIRED', 'x-idempotency-key header is required for this operation', HttpStatus.BAD_REQUEST);
   }
 }
 
 export class IdempotencyKeyConflictException extends AppException {
   constructor(key: string) {
-    super(
-      'IDEMPOTENCY_KEY_CONFLICT',
-      `Request with idempotency key ${key} is already being processed`,
-      HttpStatus.CONFLICT,
-      { idempotencyKey: key },
-    );
+    super('IDEMPOTENCY_KEY_CONFLICT', `Request with idempotency key ${key} is already being processed`, HttpStatus.CONFLICT, { idempotencyKey: key });
   }
 }
 
@@ -120,12 +109,10 @@ export class InvalidSignatureException extends AppException {
 
 export class InsufficientUsdcBalanceException extends AppException {
   constructor(required: string, available: string) {
-    super(
-      'INSUFFICIENT_USDC_BALANCE',
-      `Insufficient USDC balance. Required: ${required}, Available: ${available}`,
-      HttpStatus.BAD_REQUEST,
-      { required, available },
-    );
+    super('INSUFFICIENT_USDC_BALANCE', `Insufficient USDC balance. Required: ${required}, Available: ${available}`, HttpStatus.BAD_REQUEST, {
+      required,
+      available,
+    });
   }
 }
 

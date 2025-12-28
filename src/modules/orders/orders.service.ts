@@ -159,10 +159,7 @@ export class OrdersService {
     let stats;
     if (this.clobService?.isRealTradingEnabled() && this.clobService?.isServerWalletConfigured()) {
       try {
-        const [openOrders, trades] = await Promise.all([
-          this.clobService.getOpenOrders(),
-          this.clobService.getTrades(),
-        ]);
+        const [openOrders, trades] = await Promise.all([this.clobService.getOpenOrders(), this.clobService.getTrades()]);
 
         stats = {
           totalOrders: result.meta.total,
@@ -230,21 +227,15 @@ export class OrdersService {
               }
             : undefined;
 
-          const cancelResult = await (
-            this.marketProvider.cancelOrder as (orderId: string, walletContext?: WalletContext) => Promise<CancelResult>
-          )(order.externalOrderId!, walletContext);
+          const cancelResult = await (this.marketProvider.cancelOrder as (orderId: string, walletContext?: WalletContext) => Promise<CancelResult>)(order.externalOrderId!, walletContext);
 
           if (!cancelResult.success) {
-            this.logger.warn(
-              `Failed to cancel order on Polymarket: ${cancelResult.message}. Proceeding with local cancellation.`,
-            );
+            this.logger.warn(`Failed to cancel order on Polymarket: ${cancelResult.message}. Proceeding with local cancellation.`);
           } else {
             this.logger.log(`Order cancelled on Polymarket: ${order.externalOrderId}`);
           }
         } catch (error) {
-          this.logger.warn(
-            `Error cancelling order on Polymarket: ${(error as Error).message}. Proceeding with local cancellation.`,
-          );
+          this.logger.warn(`Error cancelling order on Polymarket: ${(error as Error).message}. Proceeding with local cancellation.`);
         }
       }
 
@@ -263,11 +254,7 @@ export class OrdersService {
     }
   }
 
-  async updateOrderStatus(
-    id: number,
-    status: OrderStatus,
-    updates?: Partial<Pick<Order, 'filledQuantity' | 'averageFillPrice' | 'externalOrderId' | 'failureReason'>>,
-  ): Promise<Order> {
+  async updateOrderStatus(id: number, status: OrderStatus, updates?: Partial<Pick<Order, 'filledQuantity' | 'averageFillPrice' | 'externalOrderId' | 'failureReason'>>): Promise<Order> {
     this.logger.setContextData({ orderId: id, status }).log('Updating order status');
 
     const queryRunner = this.dataSource.createQueryRunner();
@@ -360,11 +347,7 @@ export class OrdersService {
     }
   }
 
-  private async validateUsdcRequirements(
-    dto: CreateOrderDto,
-    market: Market,
-    userWalletAddress: string,
-  ): Promise<void> {
+  private async validateUsdcRequirements(dto: CreateOrderDto, market: Market, userWalletAddress: string): Promise<void> {
     if (!this.usdcTokenService) {
       this.logger.warn('UsdcTokenService not available, skipping USDC validation');
       return;
@@ -381,23 +364,17 @@ export class OrdersService {
 
       const userBalance = await this.usdcTokenService.getBalance(userWalletAddress);
       if (parseFloat(userBalance) < parseFloat(usdcAmount)) {
-        this.logger.warn(
-          `Insufficient USDC balance for wallet ${userWalletAddress}. Required: ${usdcAmount}, Available: ${userBalance}`,
-        );
+        this.logger.warn(`Insufficient USDC balance for wallet ${userWalletAddress}. Required: ${usdcAmount}, Available: ${userBalance}`);
         throw new InsufficientUsdcBalanceException(usdcAmount, userBalance);
       }
 
       const allowance = await this.usdcTokenService.getAllowance(userWalletAddress);
       if (parseFloat(allowance) < parseFloat(usdcAmount)) {
-        this.logger.warn(
-          `Insufficient USDC allowance for wallet ${userWalletAddress}. Required: ${usdcAmount}, Approved: ${allowance}`,
-        );
+        this.logger.warn(`Insufficient USDC allowance for wallet ${userWalletAddress}. Required: ${usdcAmount}, Approved: ${allowance}`);
         throw new InsufficientUsdcAllowanceException(usdcAmount, allowance);
       }
 
-      this.logger.log(
-        `USDC validation passed for wallet ${userWalletAddress}. Balance: ${userBalance}, Allowance: ${allowance}, Required: ${usdcAmount}`,
-      );
+      this.logger.log(`USDC validation passed for wallet ${userWalletAddress}. Balance: ${userBalance}, Allowance: ${allowance}, Required: ${usdcAmount}`);
     } catch (error) {
       if (error instanceof InsufficientUsdcBalanceException || error instanceof InsufficientUsdcAllowanceException) {
         throw error;

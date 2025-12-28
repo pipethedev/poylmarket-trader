@@ -8,8 +8,6 @@ export class RemoveIdempotencyKeyUniqueConstraint1766799000000 implements Migrat
   }
 
   public async down(queryRunner: QueryRunner): Promise<void> {
-    await queryRunner.query(
-      `ALTER TABLE "orders" ADD CONSTRAINT "UQ_orders_idempotency_key" UNIQUE ("idempotency_key")`,
-    );
+    await queryRunner.query(`ALTER TABLE "orders" ADD CONSTRAINT "UQ_orders_idempotency_key" UNIQUE ("idempotency_key")`);
   }
 }

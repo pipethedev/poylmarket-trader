@@ -126,10 +126,7 @@ describe('OrderRepository', () => {
 
       await orderRepository.markAsFailed(1, 'Processing error');
 
-      expect(repository.update).toHaveBeenCalledWith(
-        { id: 1 },
-        { status: OrderStatus.FAILED, failureReason: 'Processing error' },
-      );
+      expect(repository.update).toHaveBeenCalledWith({ id: 1 }, { status: OrderStatus.FAILED, failureReason: 'Processing error' });
     });
   });
 

@@ -70,12 +70,7 @@ export class IdempotencyService {
     return { isNew: true };
   }
 
-  async storeResponse(
-    key: string,
-    status: number,
-    response: Record<string, unknown>,
-    expiresInSeconds = 86400,
-  ): Promise<void> {
+  async storeResponse(key: string, status: number, response: Record<string, unknown>, expiresInSeconds = 86400): Promise<void> {
     const redisKey = this.buildKey(key);
 
     this.logger.setContextData({ idempotencyKey: key }).log('Storing response');

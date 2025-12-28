@@ -8,12 +8,7 @@ import { Token } from '@database/entities/token.entity';
 import { AppLogger, LogPrefix } from '@common/logger/index';
 import { EventNotFoundException } from '@common/exceptions/index';
 import { QueryEventsDto } from './dto/query-events.dto';
-import {
-  EventResponseDto,
-  EventListResponseDto,
-  EventDetailResponseDto,
-  MarketSummaryDto,
-} from './dto/event-response.dto';
+import { EventResponseDto, EventListResponseDto, EventDetailResponseDto, MarketSummaryDto } from './dto/event-response.dto';
 import type { SyncJobData } from '@modules/sync/sync.processor';
 import { MARKET_PROVIDER } from '@providers/market-provider.interface';
 import type { MarketProvider } from '@app-types/index';
@@ -78,9 +73,7 @@ export class EventsService {
           active: query.active,
         });
 
-        let matchingEvents = providerEvents.filter((event) =>
-          event.title.toLowerCase().includes(query.search!.toLowerCase()),
-        );
+        let matchingEvents = providerEvents.filter((event) => event.title.toLowerCase().includes(query.search!.toLowerCase()));
 
         if (query.featured !== undefined) {
           matchingEvents = matchingEvents.filter((event) => {

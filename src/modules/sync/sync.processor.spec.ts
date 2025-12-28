@@ -178,9 +178,7 @@ describe('SyncProcessor', () => {
 
       await processor.process(job);
 
-      expect(mockLogger.log).toHaveBeenCalledWith(
-        'Sync completed - Events: 0 created, 0 updated | Markets: 0 created, 0 updated | Tokens: 0 created, 0 updated',
-      );
+      expect(mockLogger.log).toHaveBeenCalledWith('Sync completed - Events: 0 created, 0 updated | Markets: 0 created, 0 updated | Tokens: 0 created, 0 updated');
       expect(mockLogger.warn).not.toHaveBeenCalled();
     });
 
@@ -311,10 +309,7 @@ describe('SyncProcessor', () => {
 
       processor.onFailed(job, error);
 
-      expect(mockLogger.error).toHaveBeenCalledWith(
-        'Sync job failed: Custom error message with details',
-        expect.any(String),
-      );
+      expect(mockLogger.error).toHaveBeenCalledWith('Sync job failed: Custom error message with details', expect.any(String));
     });
   });
 

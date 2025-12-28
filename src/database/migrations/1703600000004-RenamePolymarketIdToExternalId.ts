@@ -22,9 +22,7 @@ export class RenamePolymarketIdToExternalId1703600000004 implements MigrationInt
     await queryRunner.query(`DROP INDEX IF EXISTS "idx_events_polymarket_id"`);
     await queryRunner.query(`CREATE INDEX "idx_events_external_id" ON "events" ("external_id")`);
 
-    await queryRunner.query(
-      `CREATE UNIQUE INDEX "idx_events_provider_external_id" ON "events" ("provider", "external_id")`,
-    );
+    await queryRunner.query(`CREATE UNIQUE INDEX "idx_events_provider_external_id" ON "events" ("provider", "external_id")`);
 
     await queryRunner.query(`
       ALTER TABLE "markets"
@@ -44,9 +42,7 @@ export class RenamePolymarketIdToExternalId1703600000004 implements MigrationInt
     await queryRunner.query(`DROP INDEX IF EXISTS "idx_markets_polymarket_id"`);
     await queryRunner.query(`CREATE INDEX "idx_markets_external_id" ON "markets" ("external_id")`);
 
-    await queryRunner.query(
-      `CREATE UNIQUE INDEX "idx_markets_provider_external_id" ON "markets" ("provider", "external_id")`,
-    );
+    await queryRunner.query(`CREATE UNIQUE INDEX "idx_markets_provider_external_id" ON "markets" ("provider", "external_id")`);
   }
 
   public async down(queryRunner: QueryRunner): Promise<void> {

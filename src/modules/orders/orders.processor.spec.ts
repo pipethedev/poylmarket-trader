@@ -245,10 +245,7 @@ describe('OrdersProcessor', () => {
 
       await processor.onFailed(job, error);
 
-      expect(orderRepository.markAsFailed).toHaveBeenCalledWith(
-        1,
-        expect.stringContaining('Processing failed after 3 attempts'),
-      );
+      expect(orderRepository.markAsFailed).toHaveBeenCalledWith(1, expect.stringContaining('Processing failed after 3 attempts'));
     });
 
     it('should not mark as failed if attempts remaining', async () => {
@@ -276,10 +273,7 @@ describe('OrdersProcessor', () => {
 
       await processor.onFailed(job, error);
 
-      expect(orderRepository.markAsFailed).toHaveBeenCalledWith(
-        1,
-        expect.stringContaining('Processing failed after 10 attempts'),
-      );
+      expect(orderRepository.markAsFailed).toHaveBeenCalledWith(1, expect.stringContaining('Processing failed after 10 attempts'));
     });
   });
 

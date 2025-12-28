@@ -8,12 +8,7 @@ import { OrderRepository, MarketRepository } from '@database/repositories';
 import { Order, OrderStatus, OrderSide, OrderType, OrderOutcome } from '@database/entities/order.entity';
 import { Market } from '@database/entities/market.entity';
 import { AppLogger } from '@common/logger/app-logger.service';
-import {
-  OrderNotFoundException,
-  OrderNotCancellableException,
-  MarketNotFoundException,
-  MarketNotActiveException,
-} from '@common/exceptions';
+import { OrderNotFoundException, OrderNotCancellableException, MarketNotFoundException, MarketNotActiveException } from '@common/exceptions';
 
 describe('OrdersService', () => {
   let service: OrdersService;
@@ -378,10 +373,7 @@ describe('OrdersService', () => {
       const result = await service.cancelOrder(1);
 
       expect(result.status).toBe(OrderStatus.CANCELLED);
-      expect(mockLogger.error).toHaveBeenCalledWith(
-        'Failed to remove order from queue: Queue error',
-        expect.any(String),
-      );
+      expect(mockLogger.error).toHaveBeenCalledWith('Failed to remove order from queue: Queue error', expect.any(String));
     });
 
     it('should throw OrderNotFoundException if order not found', async () => {
@@ -468,9 +460,7 @@ describe('OrdersService', () => {
       queryRunner.manager.findOne.mockResolvedValue(order);
       queryRunner.manager.save.mockResolvedValue(updatedOrder);
 
-      await expect(service.updateOrderStatus(1, OrderStatus.FILLED)).rejects.toThrow(
-        'Order 1 was modified by another process',
-      );
+      await expect(service.updateOrderStatus(1, OrderStatus.FILLED)).rejects.toThrow('Order 1 was modified by another process');
       expect(queryRunner.rollbackTransaction).toHaveBeenCalled();
     });
   });

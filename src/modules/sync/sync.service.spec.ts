@@ -95,6 +95,7 @@ describe('SyncService', () => {
           provide: MarketRepository,
           useValue: {
             findActiveMarketsWithPriceInfo: jest.fn(),
+            findById: jest.fn(),
             update: jest.fn(),
           },
         },
@@ -246,10 +247,7 @@ describe('SyncService', () => {
       const existingToken = new Token();
       existingToken.id = 1;
 
-      queryRunner.manager.findOne
-        .mockResolvedValueOnce(existingMarket)
-        .mockResolvedValueOnce(existingToken)
-        .mockResolvedValueOnce(existingToken);
+      queryRunner.manager.findOne.mockResolvedValueOnce(existingMarket).mockResolvedValueOnce(existingToken).mockResolvedValueOnce(existingToken);
 
       const result = await service.syncMarket(mockProviderMarket, 1);
 
@@ -278,6 +276,7 @@ describe('SyncService', () => {
       const noToken = { id: 2, outcome: 'NO', marketId: 1 };
 
       marketRepository.findActiveMarketsWithPriceInfo.mockResolvedValue([activeMarket]);
+      marketRepository.findById.mockResolvedValue(activeMarket);
       marketProvider.getMarketPrice.mockResolvedValue({
         marketId: 'condition-123',
         yesPrice: '0.70',
@@ -285,7 +284,6 @@ describe('SyncService', () => {
         timestamp: new Date(),
       });
 
-      queryRunner.manager.findOne.mockResolvedValueOnce(activeMarket);
       queryRunner.manager.find = jest.fn().mockResolvedValue([yesToken, noToken]);
       queryRunner.manager.update = jest.fn().mockResolvedValue({});
 
@@ -303,7 +301,7 @@ describe('SyncService', () => {
     it('should skip markets not found on provider', async () => {
       const activeMarket = { id: 1, conditionId: 'c1', externalId: 'm1' } as Market;
       marketRepository.findActiveMarketsWithPriceInfo.mockResolvedValue([activeMarket]);
-      queryRunner.manager.findOne.mockResolvedValueOnce(activeMarket);
+      marketRepository.findById.mockResolvedValue(activeMarket);
       marketProvider.getMarketPrice.mockResolvedValue(null);
 
       const result = await service.updateMarketPrices();
@@ -313,10 +311,28 @@ describe('SyncService', () => {
       expect(marketRepository.update).not.toHaveBeenCalled();
     });
 
+    it('should skip markets that no longer exist in database', async () => {
+      const activeMarket = { id: 1, conditionId: 'c1', externalId: 'm1' } as Market;
+      marketRepository.findActiveMarketsWithPriceInfo.mockResolvedValue([activeMarket]);
+      marketRepository.findById.mockResolvedValue(null);
+      marketProvider.getMarketPrice.mockResolvedValue({
+        marketId: 'c1',
+        yesPrice: '0.70',
+        noPrice: '0.30',
+        timestamp: new Date(),
+      });
+
+      const result = await service.updateMarketPrices();
+
+      expect(result.updated).toBe(0);
+      expect(result.errors).toHaveLength(0);
+      expect(queryRunner.manager.update).not.toHaveBeenCalled();
+    });
+
     it('should handle price update errors', async () => {
       const activeMarket = { id: 1, conditionId: 'c1', externalId: 'm1' } as Market;
       marketRepository.findActiveMarketsWithPriceInfo.mockResolvedValue([activeMarket]);
-      queryRunner.manager.findOne.mockResolvedValueOnce(activeMarket);
+      marketRepository.findById.mockResolvedValue(activeMarket);
       marketProvider.getMarketPrice.mockRejectedValue(new Error('Price fetch failed'));
 
       const result = await service.updateMarketPrices();

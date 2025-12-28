@@ -27,11 +27,7 @@ export class EventRepository extends BaseRepository<Event> {
   }
 
   async findWithMarketCounts(): Promise<(Event & { marketCount: number })[]> {
-    const results = await this.createQueryBuilder('event')
-      .leftJoin('event.markets', 'market')
-      .addSelect('COUNT(market.id)', 'marketCount')
-      .groupBy('event.id')
-      .getRawAndEntities();
+    const results = await this.createQueryBuilder('event').leftJoin('event.markets', 'market').addSelect('COUNT(market.id)', 'marketCount').groupBy('event.id').getRawAndEntities();
 
     return results.entities.map((event, index) => ({
       ...event,

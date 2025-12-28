@@ -90,9 +90,7 @@ describe('SignatureValidationService', () => {
       const result = service.verifyMessage(testMessage, testSignature, testAddress);
 
       expect(result).toBe(false);
-      expect(mockLogger.error).toHaveBeenCalledWith(
-        expect.stringContaining('Error verifying signature: Invalid signature format'),
-      );
+      expect(mockLogger.error).toHaveBeenCalledWith(expect.stringContaining('Error verifying signature: Invalid signature format'));
     });
 
     it('should handle malformed signature', () => {

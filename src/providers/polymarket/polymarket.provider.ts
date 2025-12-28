@@ -145,8 +145,7 @@ export class PolymarketProvider implements MarketProvider {
       });
 
       const markets: ProviderMarket[] = [];
-      const searchResults =
-        response.data?.events || response.data?.results || response.data?.markets || response.data || [];
+      const searchResults = response.data?.events || response.data?.results || response.data?.markets || response.data || [];
 
       for (const item of searchResults) {
         if (item.question || item.conditionId) {
@@ -221,21 +220,15 @@ export class PolymarketProvider implements MarketProvider {
 
   async placeOrder(order: OrderRequest): Promise<OrderResult> {
     try {
-      this.logger
-        .setContextData({ marketId: order.marketId })
-        .log(`Placing ${order.side} order for ${order.outcome} outcome`);
+      this.logger.setContextData({ marketId: order.marketId }).log(`Placing ${order.side} order for ${order.outcome} outcome`);
 
       let market: ClobMarketData;
       try {
         market = (await this.clob.getMarket(order.marketId)) as ClobMarketData;
       } catch (error) {
         if (error instanceof Error && (error.message.includes('404') || error.message.includes('not found'))) {
-          this.logger.error(
-            `Market with conditionId ${order.marketId} not found on Polymarket CLOB. The market may have been removed or the conditionId is invalid.`,
-          );
-          throw new Error(
-            `Market not found on Polymarket. The conditionId "${order.marketId}" may be invalid or the market may have been removed. Please sync the market from Polymarket.`,
-          );
+          this.logger.error(`Market with conditionId ${order.marketId} not found on Polymarket CLOB. The market may have been removed or the conditionId is invalid.`);
+          throw new Error(`Market not found on Polymarket. The conditionId "${order.marketId}" may be invalid or the market may have been removed. Please sync the market from Polymarket.`);
         }
         throw error;
       }
@@ -281,14 +274,11 @@ export class PolymarketProvider implements MarketProvider {
       if (totalOrderValue < minimumOrderValue) {
         finalSize = Math.ceil(minimumOrderValue / orderPrice);
         this.logger.warn(
-          `Order value ($${totalOrderValue.toFixed(4)}) is below minimum ($${minimumOrderValue}). ` +
-            `Adjusting size from ${requestedSize} to ${finalSize} shares to meet minimum order value.`,
+          `Order value ($${totalOrderValue.toFixed(4)}) is below minimum ($${minimumOrderValue}). ` + `Adjusting size from ${requestedSize} to ${finalSize} shares to meet minimum order value.`,
         );
       }
 
-      this.logger.log(
-        `Placing order: ${order.side} ${finalSize} @ ${orderPrice} for token ${token.token_id}, negRisk: ${negRisk}, tickSize: ${tickSize}`,
-      );
+      this.logger.log(`Placing order: ${order.side} ${finalSize} @ ${orderPrice} for token ${token.token_id}, negRisk: ${negRisk}, tickSize: ${tickSize}`);
 
       const response = await this.clob.placeOrder({
         tokenId: token.token_id,

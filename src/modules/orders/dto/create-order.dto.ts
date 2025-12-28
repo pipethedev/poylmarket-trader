@@ -1,16 +1,5 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import {
-  IsNotEmpty,
-  IsOptional,
-  IsNumberString,
-  IsInt,
-  Min,
-  ValidateIf,
-  IsIn,
-  registerDecorator,
-  ValidationOptions,
-  ValidationArguments,
-} from 'class-validator';
+import { IsNotEmpty, IsOptional, IsNumberString, IsInt, Min, ValidateIf, IsIn, registerDecorator, ValidationOptions, ValidationArguments } from 'class-validator';
 import { Type } from 'class-transformer';
 import { OrderSide, OrderType, OrderOutcome } from '@database/entities/order.entity';
 

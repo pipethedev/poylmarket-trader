@@ -88,9 +88,7 @@ describe('IdempotencyService', () => {
       };
       redisService.get.mockResolvedValue(JSON.stringify(existingData));
 
-      await expect(service.checkAndLock('key', { different: 'body' }, 3600)).rejects.toThrow(
-        IdempotencyKeyConflictException,
-      );
+      await expect(service.checkAndLock('key', { different: 'body' }, 3600)).rejects.toThrow(IdempotencyKeyConflictException);
     });
   });
 

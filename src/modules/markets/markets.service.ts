@@ -5,12 +5,7 @@ import { Token } from '@database/entities/token.entity';
 import { AppLogger, LogPrefix } from '@common/logger/index';
 import { MarketNotFoundException } from '@common/exceptions/index';
 import { QueryMarketsDto } from './dto/query-markets.dto';
-import {
-  MarketResponseDto,
-  MarketListResponseDto,
-  MarketDetailResponseDto,
-  TokenResponseDto,
-} from './dto/market-response.dto';
+import { MarketResponseDto, MarketListResponseDto, MarketDetailResponseDto, TokenResponseDto } from './dto/market-response.dto';
 import { MARKET_PROVIDER } from '@providers/market-provider.interface';
 import type { MarketProvider } from '@app-types/index';
 import { SyncService } from '@modules/sync/sync.service';
@@ -150,14 +145,10 @@ export class MarketsService {
                 try {
                   let matchingEvent: any = null;
                   if ((this.marketProvider as any).getEvent) {
-                    const fetchedEvent = await (this.marketProvider as any)
-                      .getEvent(providerMarket.eventId)
-                      .catch((error) => {
-                        this.logger.warn(
-                          `Failed to fetch event ${providerMarket.eventId} from API: ${(error as Error).message}`,
-                        );
-                        return null;
-                      });
+                    const fetchedEvent = await (this.marketProvider as any).getEvent(providerMarket.eventId).catch((error) => {
+                      this.logger.warn(`Failed to fetch event ${providerMarket.eventId} from API: ${(error as Error).message}`);
+                      return null;
+                    });
                     if (fetchedEvent) {
                       matchingEvent = fetchedEvent;
                     }
@@ -173,15 +164,11 @@ export class MarketsService {
                     event = eventResult.event;
                     await this.syncService.syncMarketsForEvent(providerMarket.eventId, event.id);
                   } else {
-                    this.logger.warn(
-                      `Event ${providerMarket.eventId} not found in API, skipping market ${providerMarket.id}`,
-                    );
+                    this.logger.warn(`Event ${providerMarket.eventId} not found in API, skipping market ${providerMarket.id}`);
                     continue;
                   }
                 } catch (error) {
-                  this.logger.warn(
-                    `Failed to fetch event ${providerMarket.eventId} from API: ${(error as Error).message}`,
-                  );
+                  this.logger.warn(`Failed to fetch event ${providerMarket.eventId} from API: ${(error as Error).message}`);
                   continue;
                 }
               } else if (event) {
@@ -253,10 +240,7 @@ export class MarketsService {
       throw new MarketNotFoundException(String(id));
     }
 
-    const [tokens, event] = await Promise.all([
-      this.tokenRepository.findByMarketId(id),
-      this.eventRepository.findById(market.eventId),
-    ]);
+    const [tokens, event] = await Promise.all([this.tokenRepository.findByMarketId(id), this.eventRepository.findById(market.eventId)]);
 
     this.logger.log(`Market found with ${tokens.length} tokens`);
 

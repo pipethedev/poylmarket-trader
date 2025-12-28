@@ -105,10 +105,7 @@ describe('GlobalExceptionFilter', () => {
   });
 
   it('should handle validation errors with array message', () => {
-    const exception = new HttpException(
-      { message: ['field is required', 'field is invalid'], error: 'Bad Request' },
-      HttpStatus.BAD_REQUEST,
-    );
+    const exception = new HttpException({ message: ['field is required', 'field is invalid'], error: 'Bad Request' }, HttpStatus.BAD_REQUEST);
 
     filter.catch(exception, mockArgumentsHost as never);
 
