@@ -109,33 +109,64 @@ export class MarketsService {
     this.logger.log(`Found ${result.meta.total} markets in database`);
 
     if (result.meta.total === 0 && query.search && this.marketProvider && this.syncService) {
-      this.logger.log(`No markets found in database for search "${query.search}", attempting API fallback`);
+      this.logger.log(`No markets found in database for search "${query.search}", attempting API search`);
 
       try {
-        const providerMarkets = await this.marketProvider.getAllMarkets({
-          limit: 200,
-          active: query.active,
-        });
-
-        let matchingMarkets = providerMarkets.filter((market) =>
-          market.question.toLowerCase().includes(query.search!.toLowerCase()),
-        );
-
-        if (query.closed !== undefined) {
-          matchingMarkets = matchingMarkets.filter((market) => market.closed === query.closed);
+        let matchingMarkets: any[] = [];
+        if ((this.marketProvider as any).searchMarkets) {
+          try {
+            matchingMarkets = await (this.marketProvider as any).searchMarkets(query.search, {
+              limit: 100,
+              active: query.active,
+            });
+          } catch (searchError) {
+            this.logger.warn(`Public search failed, falling back to getAllMarkets: ${(searchError as Error).message}`);
+          }
         }
 
-        if (matchingMarkets.length > 0) {
-          this.logger.log(`Found ${matchingMarkets.length} matching markets from API, syncing...`);
+        if (matchingMarkets.length === 0) {
+          const providerMarkets = await this.marketProvider.getAllMarkets({
+            limit: 200,
+            active: query.active,
+          });
 
-          for (const providerMarket of matchingMarkets) {
+          const searchTerm = query.search.toLowerCase();
+          matchingMarkets = providerMarkets.filter((market) => market.question.toLowerCase().includes(searchTerm));
+        }
+
+        let filteredMarkets = matchingMarkets;
+        if (query.closed !== undefined) {
+          filteredMarkets = filteredMarkets.filter((market) => market.closed === query.closed);
+        }
+
+        if (filteredMarkets.length > 0) {
+          this.logger.log(`Found ${filteredMarkets.length} matching markets from API search, syncing...`);
+
+          for (const providerMarket of filteredMarkets) {
             try {
               let event = await this.eventRepository.findByExternalId(providerMarket.eventId);
 
               if (!event && this.marketProvider) {
                 try {
-                  const providerEvents = await this.marketProvider.getEvents({ limit: 200 });
-                  const matchingEvent = providerEvents.find((e) => e.id === providerMarket.eventId);
+                  let matchingEvent: any = null;
+                  if ((this.marketProvider as any).getEvent) {
+                    const fetchedEvent = await (this.marketProvider as any)
+                      .getEvent(providerMarket.eventId)
+                      .catch((error) => {
+                        this.logger.warn(
+                          `Failed to fetch event ${providerMarket.eventId} from API: ${(error as Error).message}`,
+                        );
+                        return null;
+                      });
+                    if (fetchedEvent) {
+                      matchingEvent = fetchedEvent;
+                    }
+                  }
+
+                  if (!matchingEvent) {
+                    const providerEvents = await this.marketProvider.getEvents({ limit: 200 });
+                    matchingEvent = providerEvents.find((e) => e.id === providerMarket.eventId);
+                  }
 
                   if (matchingEvent) {
                     const eventResult = await this.syncService.syncEvent(matchingEvent);
@@ -143,7 +174,7 @@ export class MarketsService {
                     await this.syncService.syncMarketsForEvent(providerMarket.eventId, event.id);
                   } else {
                     this.logger.warn(
-                      `Event ${providerMarket.eventId} not found in API results, skipping market ${providerMarket.id}`,
+                      `Event ${providerMarket.eventId} not found in API, skipping market ${providerMarket.id}`,
                     );
                     continue;
                   }

@@ -67,6 +67,26 @@ export class PolymarketProvider implements MarketProvider {
     }
   }
 
+  async getEvent(eventId: string): Promise<ProviderEvent | null> {
+    try {
+      this.logger.debug(`Fetching event ${eventId} from Gamma API`);
+
+      const response = await this.http.gammaGet<PolymarketGammaEvent>(`/events/${eventId}`);
+
+      if (!response.data) {
+        return null;
+      }
+
+      return this.mapEventToProvider(response.data);
+    } catch (error) {
+      if (error instanceof AxiosError && error.response?.status === 404) {
+        this.logger.debug(`Event ${eventId} not found on Gamma API`);
+        return null;
+      }
+      throw this.handleError(error, 'getEvent');
+    }
+  }
+
   async getMarkets(eventId: string, params?: MarketQueryParams): Promise<ProviderMarket[]> {
     try {
       this.logger.setContextData({ eventId }).debug('Fetching markets for event from Gamma API');
@@ -112,6 +132,62 @@ export class PolymarketProvider implements MarketProvider {
       return filtered.map((market) => this.mapClobMarketToProvider(market));
     } catch (error) {
       throw this.handleError(error, 'getAllMarkets');
+    }
+  }
+
+  async searchMarkets(searchTerm: string, params?: MarketQueryParams): Promise<ProviderMarket[]> {
+    try {
+      const response = await this.http.gammaGet<any>('/public-search', {
+        params: {
+          q: searchTerm,
+          limit: params?.limit || 50,
+        },
+      });
+
+      const markets: ProviderMarket[] = [];
+      const searchResults =
+        response.data?.events || response.data?.results || response.data?.markets || response.data || [];
+
+      for (const item of searchResults) {
+        if (item.question || item.conditionId) {
+          const market = item as PolymarketGammaMarket;
+          let eventId = item.eventId || item.event?.id || item.event;
+
+          if (eventId && typeof eventId === 'object') {
+            eventId = eventId.id || eventId;
+          }
+
+          if (eventId) {
+            try {
+              markets.push(this.mapMarketToProvider(market, String(eventId)));
+            } catch (error) {
+              this.logger.warn(`Failed to map market ${item.conditionId || item.id}: ${(error as Error).message}`);
+            }
+          }
+        } else if (item.title || (item.id && !item.question)) {
+          const event = item as PolymarketGammaEvent;
+          if (event.markets && Array.isArray(event.markets)) {
+            for (const market of event.markets) {
+              try {
+                markets.push(this.mapMarketToProvider(market, event.id));
+              } catch (error) {
+                this.logger.warn(`Failed to map market from event ${event.id}: ${(error as Error).message}`);
+              }
+            }
+          }
+        }
+      }
+
+      let filtered = markets;
+      if (params?.active !== undefined) {
+        filtered = filtered.filter((m) => m.active === params.active);
+      }
+
+      this.logger.log(`Found ${filtered.length} markets matching "${searchTerm}"`);
+      return filtered;
+    } catch (error) {
+      this.logger.warn(`Search failed: ${(error as Error).message}`);
+      return [];
     }
   }
 
