@@ -1,10 +1,7 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { PaginationMetaDto } from '@common/pagination';
-import { OrderSide, OrderType, OrderOutcome, OrderStatus } from '@database/entities/order.entity';
+import { OrderStatus } from '@database/entities/order.entity';
 
-const OrderSideValues = [...Object.values(OrderSide)];
-const OrderTypeValues = [...Object.values(OrderType)];
-const OrderOutcomeValues = [...Object.values(OrderOutcome)];
 const OrderStatusValues = [...Object.values(OrderStatus)];
 
 export class OrderResponseDto {
@@ -13,51 +10,6 @@ export class OrderResponseDto {
     example: 1,
   })
   id: number;
-
-  @ApiProperty({
-    description: 'Idempotency key used when creating this order',
-    example: 'order-123-abc',
-  })
-  idempotencyKey: string;
-
-  @ApiProperty({
-    description: 'Market ID this order belongs to',
-    example: 1,
-  })
-  marketId: number;
-
-  @ApiProperty({
-    description: 'Order side',
-    enum: OrderSideValues,
-    example: OrderSide.BUY,
-  })
-  side: OrderSide;
-
-  @ApiProperty({
-    description: 'Order type',
-    enum: OrderTypeValues,
-    example: OrderType.LIMIT,
-  })
-  type: OrderType;
-
-  @ApiProperty({
-    description: 'Outcome being traded',
-    enum: OrderOutcomeValues,
-    example: OrderOutcome.YES,
-  })
-  outcome: OrderOutcome;
-
-  @ApiProperty({
-    description: 'Order quantity',
-    example: '100.00000000',
-  })
-  quantity: string;
-
-  @ApiPropertyOptional({
-    description: 'Limit price',
-    example: '0.65000000',
-  })
-  price?: string | null;
 
   @ApiProperty({
     description: 'Current order status',
@@ -73,38 +25,21 @@ export class OrderResponseDto {
   filledQuantity: string;
 
   @ApiPropertyOptional({
-    description: 'Average fill price',
+    description: 'Average fill price (available after order is filled)',
     example: '0.65000000',
   })
   averageFillPrice?: string | null;
-
-  @ApiPropertyOptional({
-    description: 'External order ID from the provider',
-  })
-  externalOrderId?: string | null;
 
   @ApiPropertyOptional({
     description: 'Reason for failure if status is FAILED',
   })
   failureReason?: string | null;
 
-  @ApiPropertyOptional({
-    description: 'Wallet address of the user who placed the order',
-    example: '0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb',
-  })
-  userWalletAddress?: string | null;
-
   @ApiProperty({
     description: 'Order creation timestamp',
     example: '2024-01-15T10:30:00.000Z',
   })
   createdAt: Date;
-
-  @ApiProperty({
-    description: 'Order last update timestamp',
-    example: '2024-01-15T10:30:00.000Z',
-  })
-  updatedAt: Date;
 }
 
 export class OrderStatsDto {

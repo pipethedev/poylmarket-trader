@@ -68,20 +68,11 @@ describe('OrderFactory', () => {
       const result = OrderFactory.toResponse(order);
 
       expect(result.id).toBe(1);
-      expect(result.idempotencyKey).toBe('idem-123');
-      expect(result.marketId).toBe(1);
-      expect(result.side).toBe(OrderSide.BUY);
-      expect(result.type).toBe(OrderType.LIMIT);
-      expect(result.outcome).toBe(OrderOutcome.YES);
-      expect(result.quantity).toBe('100');
-      expect(result.price).toBe('0.65');
       expect(result.status).toBe(OrderStatus.FILLED);
       expect(result.filledQuantity).toBe('100');
       expect(result.averageFillPrice).toBe('0.64');
-      expect(result.externalOrderId).toBe('ext-123');
       expect(result.failureReason).toBeNull();
       expect(result.createdAt).toEqual(new Date('2024-01-15T10:00:00Z'));
-      expect(result.updatedAt).toEqual(new Date('2024-01-15T10:05:00Z'));
     });
 
     it('should handle order with failure reason', () => {
@@ -104,9 +95,12 @@ describe('OrderFactory', () => {
 
       const result = OrderFactory.toResponse(order);
 
+      expect(result.id).toBe(2);
       expect(result.status).toBe(OrderStatus.FAILED);
+      expect(result.filledQuantity).toBe('0');
+      expect(result.averageFillPrice).toBeNull();
       expect(result.failureReason).toBe('Insufficient liquidity');
-      expect(result.price).toBeNull();
+      expect(result.createdAt).toBeDefined();
     });
   });
 });

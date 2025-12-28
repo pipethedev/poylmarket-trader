@@ -30,21 +30,11 @@ export class OrderFactory {
   static toResponse(order: Order): OrderResponseDto {
     return {
       id: order.id,
-      idempotencyKey: order.idempotencyKey,
-      marketId: order.marketId,
-      side: order.side,
-      type: order.type,
-      outcome: order.outcome,
-      quantity: order.quantity,
-      price: order.price,
       status: order.status,
       filledQuantity: order.filledQuantity,
       averageFillPrice: order.averageFillPrice,
-      externalOrderId: order.externalOrderId,
       failureReason: order.failureReason,
-      userWalletAddress: order.userWalletAddress,
       createdAt: order.createdAt,
-      updatedAt: order.updatedAt,
     };
   }
 }
