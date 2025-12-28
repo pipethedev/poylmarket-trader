@@ -5,6 +5,18 @@ import { Wallet } from '@ethersproject/wallet';
 import { StaticJsonRpcProvider } from '@ethersproject/providers';
 import { getAddress } from '@ethersproject/address';
 
+type GasFeeResponse = {
+  estimatedGasMatic: string;
+  estimatedGasUsd: string;
+  gasPriceGwei: string;
+  note: string;
+};
+
+type GasFee = {
+  maxFeePerGas: bigint;
+  maxPriorityFeePerGas: bigint;
+};
+
 const ERC20_ABI = [
   'function balanceOf(address owner) view returns (uint256)',
   'function allowance(address owner, address spender) view returns (uint256)',
@@ -24,24 +36,10 @@ export class UsdcTokenService {
   private readonly rpcUrl: string;
 
   constructor(private readonly configService: ConfigService) {
-    const rpcUrl = this.configService.get<string>('polymarket.rpcUrl');
-    if (!rpcUrl) {
-      throw new Error('POLYMARKET_RPC_URL is required for USDC operations');
-    }
-
-    const privateKey = this.configService.get<string>('polymarket.walletPrivateKey');
-    if (!privateKey) {
-      throw new Error('POLYMARKET_WALLET_PRIVATE_KEY is required for USDC operations');
-    }
-
+    const rpcUrl = this.configService.get<string>('polymarket.rpcUrl')!;
+    const privateKey = this.configService.get<string>('polymarket.walletPrivateKey')!;
     this.funderAddress = this.configService.get<string>('polymarket.funderAddress')!;
-
-    if (!this.funderAddress) {
-      throw new Error('POLYMARKET_FUNDER_ADDRESS is required for USDC operations');
-    }
-
     this.usdcAddress = this.configService.get<string>('polymarket.usdcAddress') || '0x3c499c542cEF5E3811e1192ce70d8cC03d5c3359';
-
     this.rpcUrl = rpcUrl;
 
     this.provider = new StaticJsonRpcProvider(rpcUrl, {
@@ -50,8 +48,6 @@ export class UsdcTokenService {
     });
     this.serverWallet = new Wallet(privateKey, this.provider);
     this.usdcContract = new Contract(this.usdcAddress, ERC20_ABI, this.provider);
-
-    this.logger.log(`USDC Token Service initialized. Funder address: ${this.funderAddress}, USDC address: ${this.usdcAddress}, RPC: ${rpcUrl}, Network: Polygon (137)`);
   }
 
   async getBalance(address: string): Promise<string> {
@@ -92,10 +88,7 @@ export class UsdcTokenService {
     }
   }
 
-  private async getGasPrices(): Promise<{
-    maxFeePerGas: bigint;
-    maxPriorityFeePerGas: bigint;
-  }> {
+  private async getGasPrices(): Promise<GasFee> {
     const feeData = await this.provider.getFeeData();
 
     const minPriorityFee = BigInt('25000000000');
@@ -176,12 +169,7 @@ export class UsdcTokenService {
     return this.rpcUrl;
   }
 
-  async estimateGasFees(): Promise<{
-    estimatedGasMatic: string;
-    estimatedGasUsd: string;
-    gasPriceGwei: string;
-    note: string;
-  }> {
+  async estimateGasFees(): Promise<GasFeeResponse> {
     try {
       const { maxFeePerGas } = await this.getGasPrices();
 

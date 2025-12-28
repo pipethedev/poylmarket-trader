@@ -1,4 +1,6 @@
-export interface PolymarketGammaEvent {
+import { WalletContext } from '@/types/provider.types';
+
+export type PolymarketGammaEvent = {
   id: string;
   ticker: string;
   slug: string;
@@ -18,9 +20,9 @@ export interface PolymarketGammaEvent {
   liquidity: number;
   volume: number;
   markets: PolymarketGammaMarket[];
-}
+};
 
-export interface PolymarketGammaMarket {
+export type PolymarketGammaMarket = {
   id: string;
   question: string;
   conditionId: string;
@@ -44,16 +46,65 @@ export interface PolymarketGammaMarket {
   archived: boolean;
   acceptingOrders: boolean;
   tokens: PolymarketGammaToken[];
-}
+};
 
-export interface PolymarketGammaToken {
+export type PolymarketGammaToken = {
   token_id: string;
   outcome: string;
   price: number;
   winner: boolean;
-}
+};
 
-export interface PolymarketEventsResponse {
+export type PolymarketEventsResponse = {
   data: PolymarketGammaEvent[];
   next_cursor?: string;
-}
+};
+
+export type ClobToken = {
+  token_id: string;
+  outcome: string;
+  price?: number;
+};
+
+export type ClobMarketData = {
+  condition_id: string;
+  question: string;
+  description?: string;
+  image?: string;
+  icon?: string;
+  active: boolean;
+  closed: boolean;
+  category?: string;
+  market_slug?: string;
+  minimum_order_size?: string;
+  minimum_tick_size?: string;
+  neg_risk?: boolean;
+  tokens?: ClobToken[];
+};
+
+export type PaginationPayload = {
+  data: unknown[];
+  next_cursor?: string;
+  limit?: number;
+  count?: number;
+};
+
+export type PriceResponse = {
+  price: string;
+};
+
+export type PlaceOrderParams = {
+  tokenId: string;
+  price: number;
+  side: 'BUY' | 'SELL';
+  size: number;
+  tickSize: string;
+  negRisk: boolean;
+  walletContext?: WalletContext;
+};
+
+export type OrderResponse = {
+  orderID: string;
+  status?: string;
+  error?: string;
+};

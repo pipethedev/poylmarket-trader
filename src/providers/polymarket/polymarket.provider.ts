@@ -2,22 +2,11 @@ import { Injectable } from '@nestjs/common';
 import { AxiosError } from 'axios';
 import { AppLogger, LogPrefix } from '@common/logger';
 import { ProviderException, ProviderUnavailableException } from '@common/exceptions';
-import type {
-  MarketProvider,
-  EventQueryParams,
-  MarketQueryParams,
-  ProviderEvent,
-  ProviderMarket,
-  MarketPrice,
-  ProviderToken,
-  OrderRequest,
-  OrderResult,
-  WalletContext,
-  CancelResult,
-} from '@app-types/index';
+import type { MarketProvider, EventQueryParams, MarketQueryParams, ProviderEvent, ProviderMarket, MarketPrice, OrderRequest, OrderResult, WalletContext, CancelResult } from '@app-types/index';
 import { PolymarketHttpService } from './polymarket-http.service';
 import { PolymarketClobService } from './polymarket-clob.service';
-import { PolymarketGammaEvent, PolymarketGammaMarket } from './polymarket.types';
+import { ClobMarketData, ClobToken, PolymarketGammaEvent, PolymarketGammaMarket } from './polymarket.types';
+import { PolymarketFactory } from '@common/factories/polymarket.factory';
 
 @Injectable()
 export class PolymarketProvider implements MarketProvider {
@@ -61,7 +50,7 @@ export class PolymarketProvider implements MarketProvider {
       });
 
       this.logger.log(`Fetched ${response.data.length} events`);
-      return response.data.map((event) => this.mapEventToProvider(event));
+      return response.data.map((event) => PolymarketFactory.mapEventToProvider(event));
     } catch (error) {
       throw this.handleError(error, 'getEvents');
     }
@@ -77,7 +66,7 @@ export class PolymarketProvider implements MarketProvider {
         return null;
       }
 
-      return this.mapEventToProvider(response.data);
+      return PolymarketFactory.mapEventToProvider(response.data);
     } catch (error) {
       if (error instanceof AxiosError && error.response?.status === 404) {
         this.logger.debug(`Event ${eventId} not found on Gamma API`);
@@ -93,7 +82,7 @@ export class PolymarketProvider implements MarketProvider {
 
       const response = await this.http.gammaGet<PolymarketGammaEvent>(`/events/${eventId}`);
 
-      let markets = (response.data.markets || []).map((market) => this.mapMarketToProvider(market, eventId));
+      let markets = (response.data.markets || []).map((market) => PolymarketFactory.mapMarketToProvider(market, eventId));
 
       if (params?.active !== undefined) {
         markets = markets.filter((m) => m.active === params.active);
@@ -129,7 +118,7 @@ export class PolymarketProvider implements MarketProvider {
         filtered = filtered.slice(0, params.limit);
       }
 
-      return filtered.map((market) => this.mapClobMarketToProvider(market));
+      return filtered.map((market) => PolymarketFactory.mapClobMarketToProvider(market));
     } catch (error) {
       throw this.handleError(error, 'getAllMarkets');
     }
@@ -158,7 +147,7 @@ export class PolymarketProvider implements MarketProvider {
 
           if (eventId) {
             try {
-              markets.push(this.mapMarketToProvider(market, String(eventId)));
+              markets.push(PolymarketFactory.mapMarketToProvider(market, String(eventId)));
             } catch (error) {
               this.logger.warn(`Failed to map market ${item.conditionId || item.id}: ${(error as Error).message}`);
             }
@@ -168,7 +157,7 @@ export class PolymarketProvider implements MarketProvider {
           if (event.markets && Array.isArray(event.markets)) {
             for (const market of event.markets) {
               try {
-                markets.push(this.mapMarketToProvider(market, event.id));
+                markets.push(PolymarketFactory.mapMarketToProvider(market, event.id));
               } catch (error) {
                 this.logger.warn(`Failed to map market from event ${event.id}: ${(error as Error).message}`);
               }
@@ -331,129 +320,6 @@ export class PolymarketProvider implements MarketProvider {
     }
   }
 
-  private mapEventToProvider(event: PolymarketGammaEvent): ProviderEvent {
-    return {
-      id: event.id,
-      title: event.title,
-      description: event.description,
-      slug: event.slug,
-      image: event.image || event.icon || undefined,
-      startDate: event.startDate ? new Date(event.startDate) : undefined,
-      endDate: event.endDate ? new Date(event.endDate) : undefined,
-      active: event.active && !event.closed && !event.archived,
-      metadata: {
-        ticker: event.ticker,
-        featured: event.featured,
-        restricted: event.restricted,
-        liquidity: event.liquidity,
-        volume: event.volume,
-      },
-    };
-  }
-
-  private mapMarketToProvider(market: PolymarketGammaMarket, eventId: string): ProviderMarket {
-    const outcomePrices = this.parseOutcomePrices(market.outcomePrices);
-    const tokenIds = this.parseTokenIds(market.clobTokenIds);
-
-    const tokens: ProviderToken[] = [];
-    if (tokenIds.length >= 2) {
-      tokens.push({
-        tokenId: tokenIds[0],
-        outcome: 'YES',
-        price: outcomePrices[0] || '0',
-      });
-      tokens.push({
-        tokenId: tokenIds[1],
-        outcome: 'NO',
-        price: outcomePrices[1] || '0',
-      });
-    }
-
-    return {
-      id: market.conditionId || market.id,
-      eventId,
-      conditionId: market.conditionId,
-      question: market.question,
-      description: undefined,
-      image: market.image || market.icon || undefined,
-      outcomeYesPrice: outcomePrices[0] || '0',
-      outcomeNoPrice: outcomePrices[1] || '0',
-      volume: market.volume,
-      liquidity: market.liquidity,
-      active: market.active && market.acceptingOrders,
-      closed: market.closed,
-      tokens,
-      metadata: {
-        slug: market.slug,
-        resolutionSource: market.resolutionSource,
-        fee: market.fee,
-      },
-    };
-  }
-
-  private mapClobMarketToProvider(market: ClobMarketData): ProviderMarket {
-    const yesToken = market.tokens?.find((t: ClobToken) => t.outcome === 'Yes');
-    const noToken = market.tokens?.find((t: ClobToken) => t.outcome === 'No');
-
-    const tokens: ProviderToken[] = [];
-    if (yesToken) {
-      tokens.push({
-        tokenId: yesToken.token_id,
-        outcome: 'YES',
-        price: yesToken.price?.toString() || '0',
-      });
-    }
-    if (noToken) {
-      tokens.push({
-        tokenId: noToken.token_id,
-        outcome: 'NO',
-        price: noToken.price?.toString() || '0',
-      });
-    }
-
-    return {
-      id: market.condition_id,
-      eventId: '',
-      conditionId: market.condition_id,
-      question: market.question,
-      description: market.description,
-      image: market.image || market.icon || undefined,
-      outcomeYesPrice: yesToken?.price?.toString() || '0',
-      outcomeNoPrice: noToken?.price?.toString() || '0',
-      volume: undefined,
-      liquidity: undefined,
-      active: market.active,
-      closed: market.closed,
-      tokens,
-      metadata: {
-        category: market.category,
-        marketSlug: market.market_slug,
-        minimumOrderSize: market.minimum_order_size,
-        minimumTickSize: market.minimum_tick_size,
-      },
-    };
-  }
-
-  private parseOutcomePrices(outcomePrices: string): string[] {
-    try {
-      if (!outcomePrices) return [];
-      const parsed: unknown = JSON.parse(outcomePrices);
-      return Array.isArray(parsed) ? parsed.map(String) : [];
-    } catch {
-      return [];
-    }
-  }
-
-  private parseTokenIds(tokenIds: string): string[] {
-    try {
-      if (!tokenIds) return [];
-      const parsed: unknown = JSON.parse(tokenIds);
-      return Array.isArray(parsed) ? (parsed as string[]) : [];
-    } catch {
-      return [];
-    }
-  }
-
   private handleError(error: unknown, operation: string): ProviderException {
     if (error instanceof ProviderException) {
       return error;
@@ -475,26 +341,4 @@ export class PolymarketProvider implements MarketProvider {
 
     return new ProviderException(this.providerName, `${operation} failed: ${(error as Error).message}`);
   }
-}
-
-interface ClobToken {
-  token_id: string;
-  outcome: string;
-  price?: number;
-}
-
-interface ClobMarketData {
-  condition_id: string;
-  question: string;
-  description?: string;
-  image?: string;
-  icon?: string;
-  active: boolean;
-  closed: boolean;
-  category?: string;
-  market_slug?: string;
-  minimum_order_size?: string;
-  minimum_tick_size?: string;
-  neg_risk?: boolean;
-  tokens?: ClobToken[];
 }

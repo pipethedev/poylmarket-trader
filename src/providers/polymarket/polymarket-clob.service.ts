@@ -5,33 +5,7 @@ import { Wallet } from '@ethersproject/wallet';
 import { JsonRpcProvider } from '@ethersproject/providers';
 import { getAddress } from '@ethersproject/address';
 import type { CancelResult, WalletContext } from '@app-types/index';
-
-export interface PaginationPayload {
-  data: unknown[];
-  next_cursor?: string;
-  limit?: number;
-  count?: number;
-}
-
-export interface PriceResponse {
-  price: string;
-}
-
-export interface PlaceOrderParams {
-  tokenId: string;
-  price: number;
-  side: 'BUY' | 'SELL';
-  size: number;
-  tickSize: string;
-  negRisk: boolean;
-  walletContext?: WalletContext;
-}
-
-export interface OrderResponse {
-  orderID: string;
-  status?: string;
-  error?: string;
-}
+import { PriceResponse, PlaceOrderParams, PaginationPayload, OrderResponse } from './polymarket.types';
 
 @Injectable()
 export class PolymarketClobService {
@@ -195,25 +169,15 @@ export class PolymarketClobService {
       return this.authenticatedClient;
     }
 
-    const privateKey = this.configService.get<string>('polymarket.walletPrivateKey');
-    const funderAddress = this.configService.get<string>('polymarket.funderAddress');
+    const privateKey = this.configService.get<string>('polymarket.walletPrivateKey')!;
+    const funderAddress = this.configService.get<string>('polymarket.funderAddress')!;
     const signatureType = this.configService.get<number>('polymarket.signatureType') ?? 1;
     const chainId = this.configService.get<number>('polymarket.chainId') ?? 137;
-
-    if (!privateKey) {
-      throw new Error('POLYMARKET_WALLET_PRIVATE_KEY is required for server-authenticated CLOB operations');
-    }
-
-    if (!funderAddress) {
-      throw new Error('POLYMARKET_FUNDER_ADDRESS is required for server-authenticated CLOB operations');
-    }
 
     const host = this.configService.get<string>('polymarket.clobApiUrl')!;
     const wallet = new Wallet(privateKey);
 
     const checksummedFunderAddress = getAddress(funderAddress);
-
-    this.logger.log(`Initializing authenticated CLOB client... Wallet: ${wallet.address}, Funder: ${checksummedFunderAddress}, SignatureType: ${signatureType}`);
 
     const tempClient = new ClobClient(host, chainId, wallet);
 
@@ -232,7 +196,6 @@ export class PolymarketClobService {
       throw new Error(`Failed to create API key for CLOB authentication: ${errorMessage}`);
     }
 
-    // Validate that we got credentials
     if (!creds) {
       this.logger.error('No API credentials received from createOrDeriveApiKey');
       throw new Error('Failed to obtain API credentials from Polymarket');
@@ -250,11 +213,7 @@ export class PolymarketClobService {
       return this.userClients.get(walletAddress)!;
     }
 
-    const rpcUrl = this.configService.get<string>('polymarket.rpcUrl');
-    if (!rpcUrl) {
-      throw new Error('POLYMARKET_RPC_URL is required for user wallet orders. Please configure an RPC endpoint (e.g., Alchemy, Infura).');
-    }
-
+    const rpcUrl = this.configService.get<string>('polymarket.rpcUrl')!;
     const chainId = this.configService.get<number>('polymarket.chainId') ?? 137;
     const signatureType = this.configService.get<number>('polymarket.signatureType') ?? 1;
     const funderAddress = this.configService.get<string>('polymarket.funderAddress');
