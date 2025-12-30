@@ -26,7 +26,7 @@ import { PolymarketClobService } from '@providers/polymarket/polymarket-clob.ser
 import { SignatureValidationService } from '@common/services/signature-validation.service';
 import { UsdcTokenService } from '@common/services/usdc-token.service';
 import { createOrderMessage } from '@common/utils/message-utils';
-import { OrderType } from '@database/entities/order.entity';
+import { OrderType, OrderSide } from '@database/entities/order.entity';
 
 export type { OrderJobData };
 
@@ -74,6 +74,8 @@ export class OrdersService {
         throw new MarketNotActiveException(String(dto.marketId));
       }
 
+      const processedDto = this.processOrderDto(dto, market);
+
       let userWalletAddress: string | null = null;
       if (dto.walletAddress) {
         if (!dto.signature || !dto.nonce) {
@@ -91,12 +93,12 @@ export class OrdersService {
         userWalletAddress = dto.walletAddress;
         this.logger.log(`Wallet signature validated for ${dto.walletAddress}`);
 
-        if (this.usdcTokenService && dto.side === 'BUY') {
-          await this.validateUsdcRequirements(dto, market, userWalletAddress);
+        if (this.usdcTokenService && processedDto.side === 'BUY') {
+          await this.validateUsdcRequirements(processedDto, market, userWalletAddress);
         }
       }
 
-      const order = queryRunner.manager.create(Order, OrderFactory.create({ dto, idempotencyKey, userWalletAddress }));
+      const order = queryRunner.manager.create(Order, OrderFactory.create({ dto: processedDto, idempotencyKey, userWalletAddress }));
 
       const savedOrder = await queryRunner.manager.save(Order, order);
       await queryRunner.commitTransaction();
@@ -116,7 +118,7 @@ export class OrdersService {
   async getOrder(id: number): Promise<OrderResponseDto> {
     this.logger.setContextData({ orderId: id }).log('Fetching order details');
 
-    const order = await this.orderRepository.findById(id);
+    const order = await this.orderRepository.createQueryBuilder('order').leftJoinAndSelect('order.market', 'market').where('order.id = :id', { id }).getOne();
 
     if (!order) {
       this.logger.warn('Order not found');
@@ -129,7 +131,7 @@ export class OrdersService {
   async getOrders(query: QueryOrdersDto): Promise<OrderListResponseDto> {
     this.logger.log('Fetching orders list');
 
-    const qb = this.orderRepository.createQueryBuilder('order');
+    const qb = this.orderRepository.createQueryBuilder('order').leftJoinAndSelect('order.market', 'market');
 
     if (query.marketId) {
       qb.andWhere('order.market_id = :marketId', { marketId: query.marketId });
@@ -147,7 +149,7 @@ export class OrdersService {
       qb.andWhere('order.outcome = :outcome', { outcome: query.outcome });
     }
 
-    qb.orderBy('order.created_at', 'DESC');
+    qb.orderBy('order.createdAt', 'DESC');
 
     const result = await this.orderRepository.paginate(qb, {
       page: query.page ?? 1,
@@ -304,6 +306,7 @@ export class OrdersService {
       'process-order',
       { orderId, attempt: 1 },
       {
+        delay: 10000,
         priority: 10,
         attempts: 10,
         backoff: {
@@ -383,7 +386,62 @@ export class OrdersService {
     }
   }
 
+  private processOrderDto(dto: CreateOrderDto, market: Market): CreateOrderDto {
+    const processed = { ...dto };
+
+    // For BUY orders, if amount is provided, calculate quantity from amount
+    if (dto.side === OrderSide.BUY && dto.amount && !dto.quantity) {
+      let price: number;
+
+      if (dto.type === OrderType.MARKET) {
+        // Use current market price for MARKET orders
+        const marketPrice = dto.outcome === 'YES' ? market.outcomeYesPrice : market.outcomeNoPrice;
+        if (!marketPrice) {
+          throw new Error(`Market price not available for ${dto.outcome} outcome`);
+        }
+        price = parseFloat(marketPrice);
+        processed.price = marketPrice;
+      } else {
+        // For LIMIT orders, use provided price
+        if (!dto.price) {
+          throw new Error('Price is required for LIMIT orders');
+        }
+        price = parseFloat(dto.price);
+      }
+
+      // Calculate quantity: amount / price
+      const amount = parseFloat(dto.amount);
+      const quantity = amount / price;
+      processed.quantity = quantity.toFixed(8);
+
+      this.logger.log(`Calculated quantity ${processed.quantity} from amount ${dto.amount} USD at price ${price}`);
+    } else if (dto.side === OrderSide.BUY && dto.type === OrderType.MARKET && !dto.price) {
+      // For MARKET orders without explicit price, use market price
+      const marketPrice = dto.outcome === 'YES' ? market.outcomeYesPrice : market.outcomeNoPrice;
+      if (!marketPrice) {
+        throw new Error(`Market price not available for ${dto.outcome} outcome`);
+      }
+      processed.price = marketPrice;
+    }
+
+    // Ensure quantity is set for SELL orders
+    if (dto.side === OrderSide.SELL && !dto.quantity) {
+      throw new Error('Quantity is required for SELL orders');
+    }
+
+    // Ensure quantity is always set (either from input or calculated from amount)
+    if (!processed.quantity) {
+      throw new Error('Quantity must be provided or calculated from amount');
+    }
+
+    return processed;
+  }
+
   private calculateUsdcAmount(dto: CreateOrderDto, market: Market): string {
+    if (!dto.quantity) {
+      throw new Error('Quantity is required to calculate USDC amount');
+    }
+
     let price: number;
 
     if (dto.type === OrderType.MARKET) {

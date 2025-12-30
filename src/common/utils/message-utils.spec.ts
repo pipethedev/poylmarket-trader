@@ -101,5 +101,58 @@ describe('message-utils', () => {
 
       expect(() => JSON.parse(message)).not.toThrow();
     });
+
+    it('should include amount instead of quantity when amount is provided', () => {
+      const orderParams: CreateOrderDto = {
+        marketId: 123,
+        side: OrderSide.BUY,
+        type: OrderType.MARKET,
+        outcome: OrderOutcome.YES,
+        amount: '10',
+      };
+      const nonce = 'test-nonce';
+
+      const message = createOrderMessage(orderParams, nonce);
+      const parsed = JSON.parse(message);
+
+      expect(parsed.amount).toBe('10');
+      expect(parsed.quantity).toBeUndefined();
+    });
+
+    it('should convert number amount to string', () => {
+      const orderParams: CreateOrderDto = {
+        marketId: 123,
+        side: OrderSide.BUY,
+        type: OrderType.LIMIT,
+        outcome: OrderOutcome.YES,
+        amount: '5' as any,
+        price: '0.5',
+      };
+      const nonce = 'test-nonce';
+
+      const message = createOrderMessage(orderParams, nonce);
+      const parsed = JSON.parse(message);
+
+      expect(parsed.amount).toBe('5');
+      expect(typeof parsed.amount).toBe('string');
+    });
+
+    it('should include quantity when amount is not provided', () => {
+      const orderParams: CreateOrderDto = {
+        marketId: 123,
+        side: OrderSide.SELL,
+        type: OrderType.LIMIT,
+        outcome: OrderOutcome.NO,
+        quantity: '100',
+        price: '0.5',
+      };
+      const nonce = 'test-nonce';
+
+      const message = createOrderMessage(orderParams, nonce);
+      const parsed = JSON.parse(message);
+
+      expect(parsed.quantity).toBe('100');
+      expect(parsed.amount).toBeUndefined();
+    });
   });
 });

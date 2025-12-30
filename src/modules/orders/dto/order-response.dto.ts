@@ -40,6 +40,48 @@ export class OrderResponseDto {
     example: '2024-01-15T10:30:00.000Z',
   })
   createdAt: Date;
+
+  @ApiPropertyOptional({
+    description: 'Market ID',
+    example: 1,
+  })
+  marketId?: number;
+
+  @ApiPropertyOptional({
+    description: 'Market title/question',
+    example: 'Will Bitcoin reach $100,000 by 2025?',
+  })
+  marketTitle?: string | null;
+
+  @ApiPropertyOptional({
+    description: 'Order side (BUY or SELL)',
+    example: 'BUY',
+  })
+  side?: string;
+
+  @ApiPropertyOptional({
+    description: 'Order type (MARKET or LIMIT)',
+    example: 'LIMIT',
+  })
+  type?: string;
+
+  @ApiPropertyOptional({
+    description: 'Order outcome (YES or NO)',
+    example: 'YES',
+  })
+  outcome?: string;
+
+  @ApiPropertyOptional({
+    description: 'Order quantity',
+    example: '100.00000000',
+  })
+  quantity?: string;
+
+  @ApiPropertyOptional({
+    description: 'Order price (for LIMIT orders)',
+    example: '0.65000000',
+  })
+  price?: string | null;
 }
 
 export class OrderStatsDto {

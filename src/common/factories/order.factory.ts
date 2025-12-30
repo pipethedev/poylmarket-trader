@@ -35,6 +35,13 @@ export class OrderFactory {
       averageFillPrice: order.averageFillPrice,
       failureReason: order.failureReason,
       createdAt: order.createdAt,
+      marketId: order.marketId,
+      marketTitle: order.market?.question ?? null,
+      side: order.side,
+      type: order.type,
+      outcome: order.outcome,
+      quantity: order.quantity,
+      price: order.price ?? undefined,
     };
   }
 }

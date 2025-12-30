@@ -43,6 +43,7 @@ describe('OrdersService', () => {
     filledQuantity: '0',
     averageFillPrice: null,
     externalOrderId: null,
+    userWalletAddress: null,
     failureReason: null,
     metadata: null,
     version: 1,
@@ -59,6 +60,7 @@ describe('OrdersService', () => {
     conditionId: 'condition-456',
     question: 'Test?',
     description: null,
+    image: null,
     outcomeYesPrice: '0.65',
     outcomeNoPrice: '0.35',
     volume: null,
@@ -177,7 +179,13 @@ describe('OrdersService', () => {
 
       expect(result.id).toBe(1);
       expect(queryRunner.commitTransaction).toHaveBeenCalled();
-      expect(ordersQueue.add).toHaveBeenCalledWith('process-order', expect.any(Object), expect.any(Object));
+      expect(ordersQueue.add).toHaveBeenCalledWith(
+        'process-order',
+        expect.any(Object),
+        expect.objectContaining({
+          delay: 10000,
+        }),
+      );
     });
 
     it('should throw MarketNotFoundException if market not found', async () => {
@@ -224,11 +232,79 @@ describe('OrdersService', () => {
 
       await expect(service.createOrder(dto, 'idem-abc')).rejects.toThrow(MarketNotActiveException);
     });
+
+    it('should calculate quantity from amount for BUY orders', async () => {
+      queryRunner.manager.findOne.mockResolvedValueOnce(mockMarket);
+      const orderWithCalculatedQuantity = {
+        ...mockOrder,
+        quantity: '2.85714286',
+      };
+      queryRunner.manager.create.mockReturnValue(orderWithCalculatedQuantity);
+      queryRunner.manager.save.mockResolvedValue(orderWithCalculatedQuantity);
+      ordersQueue.add.mockResolvedValue({} as never);
+      orderRepository.updateStatus.mockResolvedValue(undefined);
+
+      const dto = {
+        marketId: 1,
+        side: OrderSide.BUY,
+        type: OrderType.MARKET,
+        outcome: OrderOutcome.NO,
+        amount: '1',
+      };
+
+      const result = await service.createOrder(dto, 'idem-amount-123');
+
+      expect(result.id).toBe(1);
+      expect(queryRunner.manager.create).toHaveBeenCalledWith(
+        Order,
+        expect.objectContaining({
+          quantity: '2.85714286',
+        }),
+      );
+    });
+
+    it('should calculate quantity from amount and use provided price for LIMIT orders', async () => {
+      queryRunner.manager.findOne.mockResolvedValueOnce(mockMarket);
+      const orderWithCalculatedQuantity = {
+        ...mockOrder,
+        quantity: '500.00000000',
+        price: '0.002',
+      };
+      queryRunner.manager.create.mockReturnValue(orderWithCalculatedQuantity);
+      queryRunner.manager.save.mockResolvedValue(orderWithCalculatedQuantity);
+      ordersQueue.add.mockResolvedValue({} as never);
+      orderRepository.updateStatus.mockResolvedValue(undefined);
+
+      const dto = {
+        marketId: 1,
+        side: OrderSide.BUY,
+        type: OrderType.LIMIT,
+        outcome: OrderOutcome.YES,
+        amount: '1',
+        price: '0.002',
+      };
+
+      const result = await service.createOrder(dto, 'idem-amount-limit-123');
+
+      expect(result.id).toBe(1);
+      expect(queryRunner.manager.create).toHaveBeenCalledWith(
+        Order,
+        expect.objectContaining({
+          quantity: '500.00000000',
+          price: '0.002',
+        }),
+      );
+    });
   });
 
   describe('getOrder', () => {
     it('should return order by id', async () => {
-      orderRepository.findById.mockResolvedValue(mockOrder);
+      const mockQueryBuilder = {
+        leftJoinAndSelect: jest.fn().mockReturnThis(),
+        where: jest.fn().mockReturnThis(),
+        getOne: jest.fn().mockResolvedValue(mockOrder),
+      };
+      orderRepository.createQueryBuilder.mockReturnValue(mockQueryBuilder as never);
 
       const result = await service.getOrder(1);
 
@@ -237,7 +313,12 @@ describe('OrdersService', () => {
     });
 
     it('should throw OrderNotFoundException if order not found', async () => {
-      orderRepository.findById.mockResolvedValue(null);
+      const mockQueryBuilder = {
+        leftJoinAndSelect: jest.fn().mockReturnThis(),
+        where: jest.fn().mockReturnThis(),
+        getOne: jest.fn().mockResolvedValue(null),
+      };
+      orderRepository.createQueryBuilder.mockReturnValue(mockQueryBuilder as never);
 
       await expect(service.getOrder(999)).rejects.toThrow(OrderNotFoundException);
     });
@@ -246,6 +327,7 @@ describe('OrdersService', () => {
   describe('getOrders', () => {
     it('should return paginated orders', async () => {
       const mockQueryBuilder = {
+        leftJoinAndSelect: jest.fn().mockReturnThis(),
         andWhere: jest.fn().mockReturnThis(),
         orderBy: jest.fn().mockReturnThis(),
       };
@@ -262,6 +344,7 @@ describe('OrdersService', () => {
 
     it('should filter by status', async () => {
       const mockQueryBuilder = {
+        leftJoinAndSelect: jest.fn().mockReturnThis(),
         andWhere: jest.fn().mockReturnThis(),
         orderBy: jest.fn().mockReturnThis(),
       };
@@ -280,6 +363,7 @@ describe('OrdersService', () => {
 
     it('should filter by marketId', async () => {
       const mockQueryBuilder = {
+        leftJoinAndSelect: jest.fn().mockReturnThis(),
         andWhere: jest.fn().mockReturnThis(),
         orderBy: jest.fn().mockReturnThis(),
       };
@@ -298,6 +382,7 @@ describe('OrdersService', () => {
 
     it('should filter by side', async () => {
       const mockQueryBuilder = {
+        leftJoinAndSelect: jest.fn().mockReturnThis(),
         andWhere: jest.fn().mockReturnThis(),
         orderBy: jest.fn().mockReturnThis(),
       };
@@ -316,6 +401,7 @@ describe('OrdersService', () => {
 
     it('should filter by outcome', async () => {
       const mockQueryBuilder = {
+        leftJoinAndSelect: jest.fn().mockReturnThis(),
         andWhere: jest.fn().mockReturnThis(),
         orderBy: jest.fn().mockReturnThis(),
       };
@@ -350,7 +436,7 @@ describe('OrdersService', () => {
 
       expect(result.status).toBe(OrderStatus.CANCELLED);
       expect(queryRunner.commitTransaction).toHaveBeenCalled();
-      expect(ordersQueue.getJobs).not.toHaveBeenCalled(); // Not queued, so no queue removal
+      expect(ordersQueue.getJobs).not.toHaveBeenCalled();
     });
 
     it('should cancel a queued order and remove from queue', async () => {

@@ -237,16 +237,19 @@ export class PolymarketProvider implements MarketProvider {
 
       const negRisk = market.neg_risk ?? false;
 
+      const MIN_PRICE = 0.001;
+      const MAX_PRICE = 0.999;
+
       let orderPrice: number;
       if (order.type === 'MARKET') {
         const marketPrice = token.price ?? parseFloat(order.outcome === 'YES' ? '0.5' : '0.5');
-        orderPrice = Math.max(marketPrice, 0.001);
+        orderPrice = Math.max(MIN_PRICE, Math.min(marketPrice, MAX_PRICE));
       } else {
         if (!order.price) {
           throw new Error('Limit orders require a price');
         }
         const limitPrice = parseFloat(order.price);
-        orderPrice = Math.max(limitPrice, 0.001);
+        orderPrice = Math.max(MIN_PRICE, Math.min(limitPrice, MAX_PRICE));
       }
 
       const walletContext = order.walletContext;
