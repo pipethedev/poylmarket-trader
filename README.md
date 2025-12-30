@@ -102,6 +102,21 @@ $ pnpm run start:prod
 $ pnpm run start:scheduler
 ```
 
+### Event Synchronization
+
+**Important**: To sync events and markets from Polymarket, you have two options:
+
+1. **Start the sync worker** (recommended for production):
+   ```bash
+   $ pnpm run start:scheduler
+   ```
+   This runs the scheduler that automatically syncs events and markets on a configured schedule.
+
+2. **Manually trigger sync via API endpoint**:
+   ```bash
+   $ curl -X POST http://localhost:3000/events/sync?limit=100
+   ```
+   
 ## Run tests
 
 ```bash
