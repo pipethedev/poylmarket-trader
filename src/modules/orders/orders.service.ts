@@ -337,9 +337,7 @@ export class OrdersService {
         this.logger.log(`Removed job ${job.id} from queue`);
       }
 
-      if (jobsToRemove.length === 0) {
-        this.logger.warn('No matching jobs found in queue');
-      } else {
+      if (jobsToRemove.length > 0) {
         this.logger.log(`Removed ${jobsToRemove.length} job(s) from queue`);
       }
     } catch (error) {

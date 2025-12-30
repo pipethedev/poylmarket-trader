@@ -75,7 +75,7 @@ describe('SyncProcessor', () => {
 
       syncService.syncEvents.mockResolvedValue(mockSyncResult);
 
-      await processor.process(job);
+      const result = await processor.process(job);
 
       expect(syncService.syncEvents).toHaveBeenCalledWith(100);
       expect(mockLogger.child).toHaveBeenCalledWith({
@@ -83,10 +83,12 @@ describe('SyncProcessor', () => {
         jobId: 'job-123',
       });
       expect(mockLogger.log).toHaveBeenCalledWith('Processing sync job');
-      expect(mockLogger.log).toHaveBeenCalledWith(expect.stringContaining('Sync completed'));
-      expect(mockLogger.log).toHaveBeenCalledWith(expect.stringContaining('Events: 5 created, 3 updated'));
-      expect(mockLogger.log).toHaveBeenCalledWith(expect.stringContaining('Markets: 10 created, 7 updated'));
-      expect(mockLogger.log).toHaveBeenCalledWith(expect.stringContaining('Tokens: 20 created, 14 updated'));
+      expect(result).toEqual({
+        eventsCreated: 5,
+        eventsUpdated: 3,
+        marketsCreated: 10,
+        marketsUpdated: 7,
+      });
     });
 
     it('should log warning when sync completes with errors', async () => {
@@ -176,9 +178,14 @@ describe('SyncProcessor', () => {
 
       syncService.syncEvents.mockResolvedValue(emptyResult);
 
-      await processor.process(job);
+      const result = await processor.process(job);
 
-      expect(mockLogger.log).toHaveBeenCalledWith('Sync completed - Events: 0 created, 0 updated | Markets: 0 created, 0 updated | Tokens: 0 created, 0 updated');
+      expect(result).toEqual({
+        eventsCreated: 0,
+        eventsUpdated: 0,
+        marketsCreated: 0,
+        marketsUpdated: 0,
+      });
       expect(mockLogger.warn).not.toHaveBeenCalled();
     });
 
@@ -201,10 +208,15 @@ describe('SyncProcessor', () => {
 
       syncService.syncEvents.mockResolvedValue(largeResult);
 
-      await processor.process(job);
+      const result = await processor.process(job);
 
-      expect(mockLogger.log).toHaveBeenCalledWith(expect.stringContaining('Events: 500 created, 300 updated'));
-      expect(mockLogger.log).toHaveBeenCalledWith(expect.stringContaining('Markets: 1000 created, 700 updated'));
+      expect(result).toEqual({
+        eventsCreated: 500,
+        eventsUpdated: 300,
+        marketsCreated: 1000,
+        marketsUpdated: 700,
+      });
+      expect(syncService.syncEvents).toHaveBeenCalledWith(1000);
     });
 
     it('should handle errors without stack trace', async () => {

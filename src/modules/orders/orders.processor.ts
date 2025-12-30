@@ -194,11 +194,15 @@ export class OrdersProcessor extends WorkerHost {
 
         if (order.side === 'BUY' && parseFloat(usdcAmount) > 0) {
           logger.log(`Transferring ${usdcAmount} USDC from ${order.userWalletAddress} to funder address`);
+
           const txHash = await this.usdcTokenService.transferFromUser(order.userWalletAddress, usdcAmount);
+
           logger.log(`USDC transfer completed. Transaction: ${txHash}`);
 
           const funderAddress = this.usdcTokenService.getFunderAddress();
+
           const funderBalance = await this.usdcTokenService.getBalance(funderAddress);
+
           logger.log(`Funder address USDC balance after transfer: ${funderBalance} USDC`);
 
           if (parseFloat(funderBalance) < parseFloat(usdcAmount) * 0.99) {

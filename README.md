@@ -98,7 +98,7 @@ $ pnpm run start:dev
 # production mode
 $ pnpm run start:prod
 
-# run scheduler/worker
+# start sync worker (runs scheduler for event/market sync and queue processors)
 $ pnpm run start:scheduler
 ```
 

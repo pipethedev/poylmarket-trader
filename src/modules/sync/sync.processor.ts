@@ -40,12 +40,6 @@ export class SyncProcessor extends WorkerHost {
 
       clearInterval(progressInterval);
 
-      jobLogger.log(
-        `Sync completed - Events: ${result.eventsCreated} created, ${result.eventsUpdated} updated | ` +
-          `Markets: ${result.marketsCreated} created, ${result.marketsUpdated} updated | ` +
-          `Tokens: ${result.tokensCreated} created, ${result.tokensUpdated} updated`,
-      );
-
       if (result.errors.length > 0) {
         jobLogger.warn(`Sync completed with ${result.errors.length} errors`);
       }

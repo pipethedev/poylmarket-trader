@@ -9,6 +9,8 @@ import { Order, OrderStatus, OrderSide, OrderType, OrderOutcome } from '@databas
 import { Market } from '@database/entities/market.entity';
 import { AppLogger } from '@common/logger/app-logger.service';
 import { OrderNotFoundException, OrderNotCancellableException, MarketNotFoundException, MarketNotActiveException } from '@common/exceptions';
+import { MARKET_PROVIDER } from '@providers/market-provider.interface';
+import type { MarketProvider } from '@app-types/index';
 
 describe('OrdersService', () => {
   let service: OrdersService;
@@ -16,6 +18,7 @@ describe('OrdersService', () => {
   let ordersQueue: jest.Mocked<Queue>;
   let dataSource: jest.Mocked<DataSource>;
   let queryRunner: jest.Mocked<QueryRunner>;
+  let marketProvider: jest.Mocked<MarketProvider>;
 
   const mockLogger = {
     setPrefix: jest.fn().mockReturnThis(),
@@ -89,6 +92,19 @@ describe('OrdersService', () => {
       createQueryRunner: jest.fn().mockReturnValue(queryRunner),
     } as unknown as jest.Mocked<DataSource>;
 
+    marketProvider = {
+      providerName: 'polymarket',
+      getName: jest.fn().mockReturnValue('polymarket'),
+      getEvents: jest.fn(),
+      getMarkets: jest.fn(),
+      getAllMarkets: jest.fn(),
+      getMarketPrice: jest.fn(),
+      placeOrder: jest.fn(),
+      cancelOrder: jest.fn(),
+      getOrderStatus: jest.fn(),
+      healthCheck: jest.fn(),
+    } as jest.Mocked<MarketProvider>;
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         OrdersService,
@@ -127,6 +143,10 @@ describe('OrdersService', () => {
           useValue: {
             findById: jest.fn(),
           },
+        },
+        {
+          provide: MARKET_PROVIDER,
+          useValue: marketProvider,
         },
       ],
     }).compile();
@@ -314,6 +334,10 @@ describe('OrdersService', () => {
   });
 
   describe('cancelOrder', () => {
+    beforeEach(() => {
+      jest.clearAllMocks();
+    });
+
     it('should cancel a pending order', async () => {
       const pendingOrder = { ...mockOrder, status: OrderStatus.PENDING };
       queryRunner.manager.findOne.mockResolvedValue(pendingOrder);
@@ -360,7 +384,7 @@ describe('OrdersService', () => {
 
       expect(result.status).toBe(OrderStatus.CANCELLED);
       expect(ordersQueue.getJobs).toHaveBeenCalled();
-      expect(mockLogger.warn).toHaveBeenCalledWith('No matching jobs found in queue');
+      expect(mockLogger.log).not.toHaveBeenCalledWith(expect.stringContaining('Removed'));
     });
 
     it('should handle queue removal errors gracefully', async () => {
@@ -387,6 +411,220 @@ describe('OrdersService', () => {
       queryRunner.manager.findOne.mockResolvedValue(filledOrder);
 
       await expect(service.cancelOrder(1)).rejects.toThrow(OrderNotCancellableException);
+    });
+
+    it('should throw OrderNotCancellableException if order is cancelled', async () => {
+      const cancelledOrder = { ...mockOrder, status: OrderStatus.CANCELLED };
+      queryRunner.manager.findOne.mockResolvedValue(cancelledOrder);
+
+      await expect(service.cancelOrder(1)).rejects.toThrow(OrderNotCancellableException);
+    });
+
+    it('should throw OrderNotCancellableException if order is failed', async () => {
+      const failedOrder = { ...mockOrder, status: OrderStatus.FAILED };
+      queryRunner.manager.findOne.mockResolvedValue(failedOrder);
+
+      await expect(service.cancelOrder(1)).rejects.toThrow(OrderNotCancellableException);
+    });
+
+    it('should allow cancellation of PROCESSING order with externalOrderId', async () => {
+      const processingOrder = {
+        ...mockOrder,
+        status: OrderStatus.PROCESSING,
+        externalOrderId: 'ext-order-123',
+      };
+
+      queryRunner.manager.findOne.mockResolvedValue(processingOrder);
+      queryRunner.manager.save.mockResolvedValue({
+        ...processingOrder,
+        status: OrderStatus.CANCELLED,
+      });
+      marketProvider.cancelOrder.mockResolvedValue({
+        success: true,
+        orderId: 'ext-order-123',
+        message: 'Order cancelled successfully',
+      });
+
+      const result = await service.cancelOrder(1);
+
+      expect(result.status).toBe(OrderStatus.CANCELLED);
+      expect(marketProvider.cancelOrder).toHaveBeenCalledWith('ext-order-123', undefined);
+      expect(queryRunner.commitTransaction).toHaveBeenCalled();
+    });
+
+    it('should throw OrderNotCancellableException for PROCESSING order without externalOrderId', async () => {
+      const processingOrder = {
+        ...mockOrder,
+        status: OrderStatus.PROCESSING,
+        externalOrderId: null,
+      };
+
+      queryRunner.manager.findOne.mockResolvedValue(processingOrder);
+
+      await expect(service.cancelOrder(1)).rejects.toThrow(OrderNotCancellableException);
+      expect(queryRunner.rollbackTransaction).toHaveBeenCalled();
+    });
+
+    it('should cancel order with externalOrderId and call provider cancelOrder', async () => {
+      const orderWithExternal = {
+        ...mockOrder,
+        status: OrderStatus.PENDING,
+        externalOrderId: 'ext-order-456',
+      };
+
+      queryRunner.manager.findOne.mockResolvedValue(orderWithExternal);
+      queryRunner.manager.save.mockResolvedValue({
+        ...orderWithExternal,
+        status: OrderStatus.CANCELLED,
+      });
+      marketProvider.cancelOrder.mockResolvedValue({
+        success: true,
+        orderId: 'ext-order-456',
+      });
+
+      const result = await service.cancelOrder(1);
+
+      expect(result.status).toBe(OrderStatus.CANCELLED);
+      expect(marketProvider.cancelOrder).toHaveBeenCalledWith('ext-order-456', undefined);
+    });
+
+    it('should proceed with local cancellation if provider cancelOrder fails', async () => {
+      const orderWithExternal = {
+        ...mockOrder,
+        status: OrderStatus.PENDING,
+        externalOrderId: 'ext-order-789',
+      };
+
+      queryRunner.manager.findOne.mockResolvedValue(orderWithExternal);
+      queryRunner.manager.save.mockResolvedValue({
+        ...orderWithExternal,
+        status: OrderStatus.CANCELLED,
+      });
+      marketProvider.cancelOrder.mockResolvedValue({
+        success: false,
+        orderId: 'ext-order-789',
+        message: 'Order already cancelled on provider',
+      });
+
+      const result = await service.cancelOrder(1);
+
+      expect(result.status).toBe(OrderStatus.CANCELLED);
+      expect(mockLogger.warn).toHaveBeenCalledWith(expect.stringContaining('Failed to cancel order on Polymarket'));
+      expect(queryRunner.commitTransaction).toHaveBeenCalled();
+    });
+
+    it('should proceed with local cancellation if provider cancelOrder throws error', async () => {
+      const orderWithExternal = {
+        ...mockOrder,
+        status: OrderStatus.PENDING,
+        externalOrderId: 'ext-order-error',
+      };
+
+      queryRunner.manager.findOne.mockResolvedValue(orderWithExternal);
+      queryRunner.manager.save.mockResolvedValue({
+        ...orderWithExternal,
+        status: OrderStatus.CANCELLED,
+      });
+      marketProvider.cancelOrder.mockRejectedValue(new Error('Network timeout'));
+
+      const result = await service.cancelOrder(1);
+
+      expect(result.status).toBe(OrderStatus.CANCELLED);
+      expect(mockLogger.warn).toHaveBeenCalledWith(expect.stringContaining('Error cancelling order on Polymarket: Network timeout'));
+      expect(queryRunner.commitTransaction).toHaveBeenCalled();
+    });
+
+    it('should pass walletContext when cancelling order with userWalletAddress', async () => {
+      const orderWithWallet = {
+        ...mockOrder,
+        status: OrderStatus.PENDING,
+        externalOrderId: 'ext-order-wallet',
+        userWalletAddress: '0x1234567890abcdef',
+      };
+
+      queryRunner.manager.findOne.mockResolvedValue(orderWithWallet);
+      queryRunner.manager.save.mockResolvedValue({
+        ...orderWithWallet,
+        status: OrderStatus.CANCELLED,
+      });
+      marketProvider.cancelOrder.mockResolvedValue({
+        success: true,
+        orderId: 'ext-order-wallet',
+      });
+
+      const result = await service.cancelOrder(1);
+
+      expect(result.status).toBe(OrderStatus.CANCELLED);
+      expect(marketProvider.cancelOrder).toHaveBeenCalledWith('ext-order-wallet', {
+        walletAddress: '0x1234567890abcdef',
+        signature: '',
+        nonce: '',
+        message: '',
+      });
+    });
+
+    it('should handle transaction rollback on database error', async () => {
+      const pendingOrder = { ...mockOrder, status: OrderStatus.PENDING };
+      queryRunner.manager.findOne.mockResolvedValue(pendingOrder);
+      queryRunner.manager.save.mockRejectedValue(new Error('Database connection lost'));
+
+      await expect(service.cancelOrder(1)).rejects.toThrow('Database connection lost');
+      expect(queryRunner.rollbackTransaction).toHaveBeenCalled();
+      expect(queryRunner.release).toHaveBeenCalled();
+    });
+
+    it('should remove multiple jobs from queue if they exist', async () => {
+      const queuedOrder = { ...mockOrder, status: OrderStatus.QUEUED };
+      const mockJob1 = {
+        id: 'job-1',
+        data: { orderId: 1, attempt: 1 },
+        remove: jest.fn().mockResolvedValue(undefined),
+      };
+      const mockJob2 = {
+        id: 'job-2',
+        data: { orderId: 1, attempt: 2 },
+        remove: jest.fn().mockResolvedValue(undefined),
+      };
+
+      queryRunner.manager.findOne.mockResolvedValue(queuedOrder);
+      queryRunner.manager.save.mockResolvedValue({ ...queuedOrder, status: OrderStatus.CANCELLED });
+      ordersQueue.getJobs.mockResolvedValue([mockJob1, mockJob2] as never);
+
+      const result = await service.cancelOrder(1);
+
+      expect(result.status).toBe(OrderStatus.CANCELLED);
+      expect(mockJob1.remove).toHaveBeenCalled();
+      expect(mockJob2.remove).toHaveBeenCalled();
+      expect(mockLogger.log).toHaveBeenCalledWith('Removed 2 job(s) from queue');
+    });
+
+    it('should not call cancelOrder on provider if order has no externalOrderId', async () => {
+      const pendingOrder = { ...mockOrder, status: OrderStatus.PENDING, externalOrderId: null };
+      queryRunner.manager.findOne.mockResolvedValue(pendingOrder);
+      queryRunner.manager.save.mockResolvedValue({
+        ...pendingOrder,
+        status: OrderStatus.CANCELLED,
+      });
+
+      await service.cancelOrder(1);
+
+      expect(marketProvider.cancelOrder).not.toHaveBeenCalled();
+    });
+
+    it('should use pessimistic write lock when fetching order', async () => {
+      const pendingOrder = { ...mockOrder, status: OrderStatus.PENDING };
+      queryRunner.manager.findOne.mockResolvedValue(pendingOrder);
+      queryRunner.manager.save.mockResolvedValue({
+        ...pendingOrder,
+        status: OrderStatus.CANCELLED,
+      });
+
+      await service.cancelOrder(1);
+
+      expect(queryRunner.manager.findOne).toHaveBeenCalledWith(Order, {
+        where: { id: 1 },
+        lock: { mode: 'pessimistic_write' },
+      });
     });
   });
 
